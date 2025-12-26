@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kensa Auditorías - Claims Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="login-logo-slot">
+                    <img src="Imagenes/Logo Kensa fondo blanco.png" alt="Logo Kensa" class="login-logo-img">
+                </div>
+                <p class="login-subtitle">Auditorías</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="loginEmail">Correo Electrónico</label>
+                    <input type="email" id="loginEmail" placeholder="usuario@ejemplo.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Contraseña</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <div class="demo-checkbox">
+                    <input type="checkbox" id="loadDemo">
+                    <label for="loadDemo">Cargar credenciales de demo</label>
+                </div>
+                <button type="submit" class="btn-primary btn-block">Iniciar Sesión</button>
+            </form>
+            <div class="login-footer">
+                <a href="https://www.kensa.cl/" target="_blank" rel="noopener noreferrer">By Kensa SPA</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (Hidden until login) -->
+    <div class="app-container" id="appContainer" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-text">
+                    <img id="clienteLogoHeader" alt="Logo cliente" style="max-width: 210px; max-height: 71px; display: block; margin-bottom: 0.25rem; object-fit: contain;">
+                </div>
+            </div>
+            <nav class="main-nav">
+                <a href="#" class="nav-item active" data-view="claims">
+                    <i class="ph ph-car"></i>
+                    <span>Siniestros</span>
+                </a>
+                <a href="#" class="nav-item" data-view="dashboard">
+                    <i class="ph ph-squares-four"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-view="usuarios">
+                    <i class="ph ph-users"></i>
+                    <span>Usuarios</span>
+                </a>
+                <a href="#" class="nav-item" data-view="clientes">
+                    <i class="ph ph-buildings"></i>
+                    <span>Clientes</span>
+                </a>
+                <div class="sidebar-separator"></div>
+                <div id="sidebarFilters"></div>
+            </nav>
+            <div class="sidebar-actions">
+                <button class="btn-secondary sidebar-action-btn" id="importSidebarButton" type="button">
+                    <i class="ph ph-upload-simple"></i>
+                    <span>Importar</span>
+                </button>
+                <button class="btn-primary sidebar-action-btn" id="exportSidebarButton" type="button">
+                    <i class="ph ph-download-simple"></i>
+                    <span>Exportar</span>
+                </button>
+            </div>
+            <div class="user-profile">
+                <img src="https://ui-avatars.com/api/?name=Juan+Munoz&background=3b82f6&color=fff" alt="User">
+                <div class="user-info">
+                    <span class="name">Juan Muñoz</span>
+                    <span class="role">Admin</span>
+                </div>
+                <button class="logout-btn" id="logoutBtn" title="Cerrar Sesión">
+                    <i class="ph ph-sign-out"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1 id="page-title">Dashboard</h1>
+                <div class="actions" id="topBarActions"></div>
+            </header>
+
+            <div id="content-area">
+                <!-- Views will be injected here by JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Vista Clientes (template) -->
+    <template id="clientesViewTemplate">
+        <section class="clientes-view">
+            <header class="view-header">
+                <div>
+                    <h1 class="view-title">Clientes</h1>
+                    <p class="view-subtitle">Mantenedor de clientes asociados a siniestros y auditorías.</p>
+                </div>
+                <button id="btnNuevoCliente" class="btn-primary">+ Nuevo Cliente</button>
+            </header>
+
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <label class="toolbar-label" for="searchCliente">Buscar</label>
+                    <input type="text" id="searchCliente" class="input-text" placeholder="Buscar por nombre o RUT" />
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label" for="filterEstadoCliente">Estado</label>
+                    <select id="filterEstadoCliente" class="input-select">
+                        <option value="TODOS">Todos</option>
+                        <option value="ACTIVO">Activos</option>
+                        <option value="INACTIVO">Inactivos</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-striped" id="tablaClientes">
+                        <thead>
+                            <tr>
+                                <th>RUT</th>
+                                <th>Nombre / Razón Social</th>
+                                <th>Correo</th>
+                                <th>Teléfono</th>
+                                <th>Comuna</th>
+                                <th>Estado</th>
+                                <th class="text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyClientes"></tbody>
+                    </table>
+                    <div id="paginacionClientes" class="pagination-container"></div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- Modal Cliente -->
+    <div id="modalCliente" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog">
+            <header class="modal-header">
+                <h2 id="modalClienteTitulo">Nuevo Cliente</h2>
+                <button type="button" class="modal-close" id="btnCerrarModalCliente">×</button>
+            </header>
+
+            <div class="modal-body">
+                <form id="formCliente">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clienteRut">RUT</label>
+                            <input type="text" id="clienteRut" class="input-text" placeholder="12.345.678-9" required />
+                            <small class="form-error" data-error-for="clienteRut"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="clienteNombre">Nombre / Razón Social</label>
+                            <input type="text" id="clienteNombre" class="input-text" required />
+                            <small class="form-error" data-error-for="clienteNombre"></small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clienteEmail">Correo electrónico</label>
+                            <input type="email" id="clienteEmail" class="input-text" />
+                            <small class="form-error" data-error-for="clienteEmail"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="clienteTelefono">Teléfono</label>
+                            <input type="text" id="clienteTelefono" class="input-text" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clienteComuna">Comuna</label>
+                            <input type="text" id="clienteComuna" class="input-text" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="clienteDireccion">Dirección</label>
+                            <input type="text" id="clienteDireccion" class="input-text" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clienteTipo">Tipo de cliente</label>
+                            <select id="clienteTipo" class="input-select">
+                                <option value="PERSONA">Persona Natural</option>
+                                <option value="EMPRESA">Persona Jurídica</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="clienteEstado">Estado</label>
+                            <select id="clienteEstado" class="input-select">
+                                <option value="ACTIVO">Activo</option>
+                                <option value="INACTIVO">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clienteLogo">Logo del cliente</label>
+                            <input type="file" id="clienteLogo" class="input-text" accept="image/*" />
+                            <small class="form-error" data-error-for="clienteLogo"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="clienteLogoAuditor">Logo del Auditor</label>
+                            <input type="file" id="clienteLogoAuditor" class="input-text" accept="image/*" />
+                            <small class="form-error" data-error-for="clienteLogoAuditor"></small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clienteHhMo">HH MO</label>
+                            <input type="number" step="0.01" id="clienteHhMo" class="input-text" />
+                        </div>
+                        <div class="form-group">
+                            <label for="clienteHhPinBicapa">HH Pin. Bicapa</label>
+                            <input type="number" step="0.01" id="clienteHhPinBicapa" class="input-text" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clienteHhPinTricapa">HH Pin. Tricapa</label>
+                            <input type="number" step="0.01" id="clienteHhPinTricapa" class="input-text" />
+                        </div>
+                        <div class="form-group">
+                            <label for="clienteValorUf">Valor UF</label>
+                            <input type="number" step="0.01" id="clienteValorUf" class="input-text" />
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <footer class="modal-footer">
+                <button type="button" class="btn-secondary" id="btnCancelarCliente">Cancelar</button>
+                <button type="button" class="btn-primary" id="btnGuardarCliente">Guardar</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Vista Usuarios (template) -->
+    <template id="usuariosViewTemplate">
+        <section class="usuarios-view">
+            <header class="view-header">
+                <div>
+                    <h1 class="view-title">Usuarios</h1>
+                    <p class="view-subtitle">Administrador de usuarios de Kensa Auditorías.</p>
+                </div>
+                <button id="btnNuevoUsuario" class="btn-primary">+ Nuevo Usuario</button>
+            </header>
+
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <label class="toolbar-label" for="searchUsuario">Buscar</label>
+                    <input type="text" id="searchUsuario" class="input-text" placeholder="Buscar por nombre, RUT o correo" />
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label" for="filterRolUsuario">Rol</label>
+                    <select id="filterRolUsuario" class="input-select">
+                        <option value="TODOS">Todos</option>
+                        <option value="ADMIN">Administrador</option>
+                        <option value="SUPERVISOR">Supervisor</option>
+                        <option value="AUDITOR">Auditor</option>
+                        <option value="LECTOR">Lector</option>
+                    </select>
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label" for="filterEstadoUsuario">Estado</label>
+                    <select id="filterEstadoUsuario" class="input-select">
+                        <option value="TODOS">Todos</option>
+                        <option value="ACTIVO">Activos</option>
+                        <option value="INACTIVO">Inactivos</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-striped" id="tablaUsuarios">
+                        <thead>
+                            <tr>
+                                <th>RUT</th>
+                                <th>Nombre</th>
+                                <th>Correo</th>
+                                <th>Teléfono</th>
+                                <th>Rol</th>
+                                <th>Cliente</th>
+                                <th>Estado</th>
+                                <th>Último acceso</th>
+                                <th class="text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyUsuarios"></tbody>
+                    </table>
+                    <div id="paginacionUsuarios" class="pagination-container"></div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- Modal Usuario -->
+    <div id="modalUsuario" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog">
+            <header class="modal-header">
+                <h2 id="modalUsuarioTitulo">Nuevo Usuario</h2>
+                <button type="button" class="modal-close" id="btnCerrarModalUsuario">×</button>
+            </header>
+
+            <div class="modal-body">
+                <form id="formUsuario">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="usuarioRut">RUT</label>
+                            <input type="text" id="usuarioRut" class="input-text" placeholder="12.345.678-9" required />
+                            <small class="form-error" data-error-for="usuarioRut"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="usuarioNombre">Nombre completo</label>
+                            <input type="text" id="usuarioNombre" class="input-text" required />
+                            <small class="form-error" data-error-for="usuarioNombre"></small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="usuarioEmail">Correo electrónico</label>
+                            <input type="email" id="usuarioEmail" class="input-text" required />
+                            <small class="form-error" data-error-for="usuarioEmail"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="usuarioTelefono">Teléfono</label>
+                            <input type="text" id="usuarioTelefono" class="input-text" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="usuarioRol">Rol / Perfil</label>
+                            <select id="usuarioRol" class="input-select" required>
+                                <option value="">Seleccionar…</option>
+                                <option value="ADMIN">Administrador</option>
+                                <option value="SUPERVISOR">Supervisor</option>
+                                <option value="AUDITOR">Auditor</option>
+                                <option value="LECTOR">Lector</option>
+                            </select>
+                            <small class="form-error" data-error-for="usuarioRol"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="usuarioEstado">Estado</label>
+                            <select id="usuarioEstado" class="input-select">
+                            <option value="ACTIVO">Activo</option>
+                            <option value="INACTIVO">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="usuarioClienteId">Cliente</label>
+                        <select id="usuarioClienteId" class="input-select">
+                            <option value="">Sin cliente asociado</option>
+                        </select>
+                        <small class="form-error" data-error-for="usuarioClienteId"></small>
+                    </div>
+                </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="usuarioPassword">Contraseña inicial</label>
+                            <input type="password" id="usuarioPassword" class="input-text" placeholder="Opcional (si aplica)" />
+                            <small class="form-error" data-error-for="usuarioPassword"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="usuarioObservaciones">Observaciones</label>
+                            <textarea id="usuarioObservaciones" class="input-text" rows="2"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <footer class="modal-footer">
+                <button type="button" class="btn-secondary" id="btnCancelarUsuario">Cancelar</button>
+                <button type="button" class="btn-primary" id="btnGuardarUsuario">Guardar</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Modal for New Claim -->
+    <div id="newClaimModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nuevo Siniestro</h2>
+                <button class="modal-close" id="closeModal"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="newClaimForm" class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="claimNumber">Número de siniestro</label>
+                        <input type="text" id="claimNumber" placeholder="Ej: 2025-000123" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicleBrand">Marca</label>
+                        <input type="text" id="vehicleBrand" placeholder="Ej: Toyota" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicleModel">Modelo</label>
+                        <input type="text" id="vehicleModel" placeholder="Ej: Corolla" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicleYear">Año</label>
+                        <input type="number" id="vehicleYear" placeholder="2022" min="1900" max="2025" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehiclePlate">Patente</label>
+                        <input type="text" id="vehiclePlate" placeholder="ABCD12" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="workshop">Taller</label>
+                        <select id="workshop" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="central">Taller Central</option>
+                            <option value="autofactoria">Autofactoria</option>
+                            <option value="express">Mecánica Express</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="adjuster">Liquidador</label>
+                        <select id="adjuster" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="juan">Juan Muñoz</option>
+                            <option value="maria">María González</option>
+                            <option value="carlos">Carlos Pérez</option>
+                            <option value="ana">Ana Silva</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="claimType">Tipo</label>
+                        <select id="claimType" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="Presencial">Presencial</option>
+                            <option value="Remoto">Remoto</option>
+                        </select>
+                    </div>
+                    <div class="form-group form-group-full">
+                        <label>Importardor IA</label>
+                        <div id="newClaimPdfDropZone" class="new-claim-dropzone">
+                            <div class="new-claim-dropzone-content">
+                                <p class="new-claim-dropzone-title">Smart Scanner IA</p>
+                                <p class="new-claim-dropzone-subtitle">Powered by Kensa SpA</p>
+                                <p class="new-claim-dropzone-helper">Extraeremos automáticamente los datos del siniestro.</p>
+                            </div>
+                            <input
+                                type="file"
+                                id="newClaimPdfInput"
+                                accept="application/pdf"
+                                multiple
+                                hidden
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelBtn">Cancelar</button>
+                    <button type="submit" class="btn-primary"><i class="ph ph-check"></i> Crear Siniestro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Plantilla estática de Informe de Auditoría (layout A4 inspirado en maqueta interactiva) -->
+    <template id="auditReportTemplate">
+        <div class="audit-report">
+            <section class="page page--a4 page-1">
+                <div class="brand-row">
+                    <img id="reportLogoLeftP1" class="brand-row__logo brand-row__logo--left" src="{{logo_left}}" alt="Logo SURA">
+                    <img id="reportLogoRightP1" class="brand-row__logo brand-row__logo--right" src="{{logo_right}}" alt="Logo Kensa">
+                </div>
+
+                <div class="date-pill">
+                    <div class="date-pill__label">Fecha del informe</div>
+                    <div class="date-pill__value"><strong>{{fecha_informe}}</strong></div>
+                </div>
+
+                <div class="title-band">
+                    <h1>INFORME DE AUDITORÍA</h1>
+                    <h2>SINIESTRO: {{numero_siniestro}}</h2>
+                </div>
+
+                <div class="uf-card uf-card--pill">
+                    <div class="uf-card__value">{{detalle_uf}}</div>
+                    <div class="uf-card__statusText">Detalle de ahorro</div>
+                    <div class="uf-card__status estado-{{estado_class}}">{{estado_texto}}</div>
+                </div>
+
+                <section class="case-grid">
+                    <div class="case-item"><strong>LIQUIDADOR</strong> <span>{{liquidador}}</span></div>
+                    <div class="case-item taller"><strong>TALLER</strong> <span>{{taller}}</span></div>
+                    <div class="case-item"><strong>MARCA</strong> <span>{{marca}}</span></div>
+                    <div class="case-item modelo"><strong>MODELO</strong> <span>{{modelo}}</span></div>
+                    <div class="case-item"><strong>PATENTE</strong> <span>{{patente}}</span></div>
+                    <div class="case-item anio"><strong>AÑO</strong> <span>{{anio}}</span></div>
+                </section>
+
+                <section class="panel-box panel-box--denuncio">
+                    <div class="panel-box__title">DENUNCIO</div>
+                    <div class="panel-box__body">{{denuncio}}</div>
+                </section>
+
+                <section class="panel-box panel-box--obsliq">
+                    <div class="panel-box__title">OBSERVACIÓN DE LIQUIDACIÓN</div>
+                    <div class="panel-box__body">{{observacion_liquidacion}}</div>
+                </section>
+
+                <section class="panel-box panel-box--obstec">
+                    <div class="panel-box__title">OBSERVACIÓN TÉCNICA</div>
+                    <div class="panel-box__body">{{observacion_tecnica}}</div>
+                </section>
+
+                <section class="table-wrap">
+                    <div class="table-title">Detalle de ahorro</div>
+                    <div class="table table--saving">
+                        <div class="table__row table__row--head">
+                            <div class="table__cell w-25">Pieza</div>
+                            <div class="table__cell w-35">Observación</div>
+                            <div class="table__cell w-15 ta-right">Ajuste Liq. (HH)</div>
+                            <div class="table__cell w-15 ta-right">Sugerido (HH)</div>
+                            <div class="table__cell w-10 ta-right">Ahorro ($)</div>
+                        </div>
+                        <div class="table__body" id="reportTableBody">
+                            <div class="table__row">
+                                <div class="table__cell w-25">{{pieza_1}}</div>
+                                <div class="table__cell w-35">{{obs_1}}</div>
+                                <div class="table__cell w-15 ta-right">{{ajuste_1}}</div>
+                                <div class="table__cell w-15 ta-right">{{sugerido_1}}</div>
+                                <div class="table__cell w-10 ta-right">{{ahorro_1}}</div>
+                            </div>
+                        </div>
+                        <div class="table__row table__row--foot">
+                            <div class="table__cell w-25"></div>
+                            <div class="table__cell w-35"></div>
+                            <div class="table__cell w-15 ta-right"></div>
+                            <div class="table__cell w-15 ta-right"><strong>Total (Pesos)</strong></div>
+                            <div class="table__cell w-10 ta-right"><strong>{{total_pesos}}</strong></div>
+                        </div>
+                    </div>
+                </section>
+
+                <footer class="doc-footer">
+                    <div class="doc-footer__bar"></div>
+                    <div class="doc-footer__brand">Kensa</div>
+                </footer>
+            </section>
+
+            <section class="page page--a4 page-2">
+                <div class="brand-row">
+                    <img id="reportLogoLeftP2" class="brand-row__logo brand-row__logo--left" src="{{logo_left}}" alt="Logo SURA">
+                    <img id="reportLogoRightP2" class="brand-row__logo brand-row__logo--right" src="{{logo_right}}" alt="Logo Kensa">
+                </div>
+
+                <div class="title-band">
+                    <h1>REGISTRO FOTOGRÁFICO</h1>
+                    <h2>Imágenes de respaldo</h2>
+                </div>
+
+                <section class="photo-grid">
+                    <figure class="photo-card"><div class="photo-stage"><img src="{{foto_1}}" alt="Foto 1"></div></figure>
+                    <figure class="photo-card"><div class="photo-stage"><img src="{{foto_2}}" alt="Foto 2"></div></figure>
+                    <figure class="photo-card"><div class="photo-stage"><img src="{{foto_3}}" alt="Foto 3"></div></figure>
+                    <figure class="photo-card"><div class="photo-stage"><img src="{{foto_4}}" alt="Foto 4"></div></figure>
+                </section>
+
+                <section class="mg-section">
+                    <div class="mg-title">GESTIÓN DE LIQUIDACIÓN</div>
+                    <div class="mg-scale">
+                        <div>Con observaciones</div>
+                        <div>Sin observaciones</div>
+                    </div>
+                    <svg class="mg-graph" id="mgGraphStatic" aria-label="Gestión"></svg>
+                </section>
+
+                <footer class="doc-footer">
+                    <div class="doc-footer__bar"></div>
+                    <div class="doc-footer__brand">Kensa</div>
+                </footer>
+            </section>
+        </div>
+    </template>
+    <div id="toastContainer" class="toast-container"></div>
+    <script src="js/data.v2.js"></script>
+    <script src="js/charts.js?v=2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="js/app.v2.js?v=2"></script>
+</body>
+
+</html>
