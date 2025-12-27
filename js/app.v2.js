@@ -3460,6 +3460,10 @@ async function exportBudgetPdf(claimId) {
         limpiarErroresCliente();
         clienteLogoTemp = null;
         clienteLogoAuditorTemp = null;
+        const logoInput = document.getElementById('clienteLogo');
+        if (logoInput) logoInput.value = '';
+        const logoAudInput = document.getElementById('clienteLogoAuditor');
+        if (logoAudInput) logoAudInput.value = '';
     }
 
     function validarClienteFormulario(data) {
@@ -3479,13 +3483,34 @@ async function exportBudgetPdf(claimId) {
         return errors;
     }
 
-    function guardarClienteDesdeFormulario() {
+    function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => resolve(ev.target?.result || null);
+            reader.onerror = () => reject(reader.error || new Error('No se pudo leer el archivo.'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function resolveLogoData(inputEl, fallback) {
+        const file = inputEl?.files?.[0];
+        if (!file) return fallback || null;
+        try {
+            const result = await readFileAsDataUrl(file);
+            return typeof result === 'string' ? result : (fallback || null);
+        } catch (err) {
+            console.warn('No se pudo leer el archivo de logo:', err);
+            return fallback || null;
+        }
+    }
+
+    async function guardarClienteDesdeFormulario() {
         const toNumberOrEmpty = (val) => {
             const n = Number(String(val).replace(',', '.'));
             return Number.isFinite(n) ? n : '';
         };
 
-        const data = {
+        const baseData = {
             rut: document.getElementById('clienteRut')?.value.trim() || '',
             nombre: document.getElementById('clienteNombre')?.value.trim() || '',
             email: document.getElementById('clienteEmail')?.value.trim() || '',
@@ -3497,15 +3522,26 @@ async function exportBudgetPdf(claimId) {
             hhMo: toNumberOrEmpty(document.getElementById('clienteHhMo')?.value || ''),
             hhPinBicapa: toNumberOrEmpty(document.getElementById('clienteHhPinBicapa')?.value || ''),
             hhPinTricapa: toNumberOrEmpty(document.getElementById('clienteHhPinTricapa')?.value || ''),
-            valorUf: toNumberOrEmpty(document.getElementById('clienteValorUf')?.value || ''),
-            logo: clienteLogoTemp,
-            logoAuditor: clienteLogoAuditorTemp
+            valorUf: toNumberOrEmpty(document.getElementById('clienteValorUf')?.value || '')
         };
 
-        const errors = validarClienteFormulario(data);
+        const errors = validarClienteFormulario(baseData);
         limpiarErroresCliente();
         Object.entries(errors).forEach(([fieldId, msg]) => setFormError(fieldId, msg));
         if (Object.keys(errors).length) return;
+
+        const logoInput = document.getElementById('clienteLogo');
+        const logoAudInput = document.getElementById('clienteLogoAuditor');
+        const [logo, logoAuditor] = await Promise.all([
+            resolveLogoData(logoInput, clienteLogoTemp),
+            resolveLogoData(logoAudInput, clienteLogoAuditorTemp)
+        ]);
+
+        const data = {
+            ...baseData,
+            logo,
+            logoAuditor
+        };
 
         const nowIso = new Date().toISOString();
         data.rut = formatearRut(data.rut);
