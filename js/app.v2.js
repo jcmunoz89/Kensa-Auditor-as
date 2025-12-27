@@ -4154,32 +4154,34 @@ async function exportBudgetPdf(claimId) {
                             <div class="row-id">
                                 <input type="checkbox" class="chk-siniestro" data-claim-id="${claim.id}" ${checked}>
                                 <div>
-                                    <div class="claim-id-cell">${claim.id}</div>
+                                    <div class="claim-id-cell">${claim.id}<span class="claim-plate-inline"> - ${claim.plate || '-'}</span></div>
                                     <div class="claim-vehicle">${claim.brand} ${claim.model} ${claim.year}</div>
                                 </div>
                             </div>
-                            <span class="status-badge ${badgeClass}">${claim.status}</span>
-                        </div>
-                        <div class="claim-row-meta">
-                            <div><strong>Patente</strong>${claim.plate}</div>
-                            <div><strong>Taller</strong>${claim.workshop}</div>
-                            <div><strong>Tipo</strong>${tipo}</div>
-                        </div>
-                        <div class="claim-row-meta">
-                            <div><strong>Creación</strong>${createdParts.date}${createdParts.time ? ` · <span class="dt-time">${createdParts.time}</span>` : ''}</div>
-                            <div><strong>Actualización</strong>${updatedParts.date}${updatedParts.time ? ` · <span class="dt-time">${updatedParts.time}</span>` : ''}</div>
-                            <div>
-                                <strong>SLA</strong>
-                                <div style="display:flex; align-items:center; gap:0.5rem;">
-                                    <div style="width: 72px; height: 6px; background: #e2e8f0; border-radius: 3px;">
-                                        <div style="width: ${claim.sla}%; height: 100%; background: ${slaColor}; border-radius: 3px;"></div>
-                                    </div>
-                                    <span style="font-size: 0.85rem; color: var(--text-muted);">${claim.sla}%</span>
-                                </div>
+                            <div class="claim-row-actions">
+                                <span class="status-badge ${badgeClass}">${claim.status}</span>
+                                <button class="icon-btn view-claim-btn" data-id="${claim.id}" type="button" title="Ver detalle" aria-label="Ver detalle">
+                                    <i class="ph ph-eye"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="claim-card-actions">
-                            <button class="btn-secondary btn-sm view-claim-btn" data-id="${claim.id}" type="button">Ver detalle</button>
+                        <div class="claim-row-meta">
+                            <div class="claim-meta claim-meta--plate"><strong>Patente</strong>${claim.plate}</div>
+                            <div class="claim-meta claim-meta--workshop"><strong>Taller</strong>${claim.workshop}</div>
+                            <div class="claim-meta claim-meta--type"><strong>Tipo</strong>${tipo}</div>
+                        </div>
+                        <div class="claim-row-meta">
+                            <div class="claim-meta claim-meta--created"><strong>Creación</strong>${createdParts.date}${createdParts.time ? ` · <span class="dt-time">${createdParts.time}</span>` : ''}</div>
+                            <div class="claim-meta claim-meta--updated"><strong>Actualización</strong>${updatedParts.date}${updatedParts.time ? ` · <span class="dt-time">${updatedParts.time}</span>` : ''}</div>
+                            <div>
+                                <strong class="claim-sla-label">SLA</strong>
+                                <div class="claim-sla-row">
+                                    <div class="claim-sla-track">
+                                        <div class="claim-sla-fill" style="width: ${claim.sla}%; background: ${slaColor};"></div>
+                                    </div>
+                                    <span class="claim-sla-value">${claim.sla}%</span>
+                                </div>
+                            </div>
                         </div>
                     </article>
                 `;

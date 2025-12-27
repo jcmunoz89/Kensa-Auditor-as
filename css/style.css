@@ -958,6 +958,16 @@ video {
     .top-bar .actions.actions--claims .btn-label {
         display: none;
     }
+
+    .top-bar .actions.actions--claims #btnNewClaimTop {
+        padding: 0.48rem 0.96rem;
+        min-height: 35px;
+        font-size: 0.8rem;
+    }
+
+    .top-bar .actions.actions--claims #btnNewClaimTop i {
+        font-size: 0.8rem;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1229,6 +1239,30 @@ tr:hover {
     display: block;
 }
 
+.claim-row-card .claim-sla-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.claim-row-card .claim-sla-track {
+    width: 72px;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.claim-row-card .claim-sla-fill {
+    height: 100%;
+    border-radius: 3px;
+}
+
+.claim-row-card .claim-sla-value {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
 .claim-card-actions {
     display: flex;
     justify-content: flex-end;
@@ -1304,6 +1338,68 @@ tr:hover {
 
     .claims-list-header {
         display: none;
+    }
+
+    .claims-pagination .page-size-control {
+        display: none;
+    }
+
+    .claims-pagination .page-controls .btn-secondary {
+        padding: 0.51rem 1.02rem;
+        min-height: 37px;
+        font-size: 0.85rem;
+    }
+
+    .claim-row-card .claim-meta--workshop,
+    .claim-row-card .claim-meta--type,
+    .claim-row-card .claim-meta--plate {
+        display: none;
+    }
+
+    .claim-row-card .claim-meta--created,
+    .claim-row-card .claim-meta--updated {
+        display: none;
+    }
+
+    .claim-row-card .claim-sla-label {
+        display: none;
+    }
+
+    .claim-row-card .claim-sla-row {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+    }
+
+    .claim-row-card .claim-sla-track {
+        width: 100%;
+    }
+
+    .claim-row-card .claim-sla-value {
+        justify-self: end;
+        font-size: 0.8rem;
+    }
+
+    .claim-row-card .claim-row-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .claim-row-card .icon-btn {
+        margin-right: 0;
+    }
+
+    .claim-row-card .claim-id-cell {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.35rem;
+    }
+
+    .claim-row-card .claim-plate-inline {
+        color: var(--text-muted);
+        font-weight: 500;
     }
 }
 
