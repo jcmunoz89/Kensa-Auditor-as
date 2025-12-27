@@ -1663,6 +1663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const topBar = document.querySelector('.top-bar');
     const mobileSidebarMq = typeof window.matchMedia === 'function'
         ? window.matchMedia('(max-width: 1023px)')
         : { matches: false, addEventListener: null };
@@ -1675,6 +1676,24 @@ document.addEventListener('DOMContentLoaded', () => {
             sidebar.removeAttribute('aria-hidden');
         }
     };
+
+    const syncTopBarOffset = () => {
+        if (!topBar) return;
+        const height = topBar.getBoundingClientRect().height;
+        document.documentElement.style.setProperty('--topbar-offset', `${height}px`);
+    };
+
+    const scheduleTopBarOffset = () => {
+        if (!topBar) return;
+        requestAnimationFrame(syncTopBarOffset);
+    };
+
+    if (topBar && typeof ResizeObserver !== 'undefined') {
+        const topBarObserver = new ResizeObserver(() => syncTopBarOffset());
+        topBarObserver.observe(topBar);
+    } else {
+        window.addEventListener('resize', scheduleTopBarOffset);
+    }
 
     const closeSidebar = () => {
         document.body.classList.remove('sidebar-open');
@@ -1779,6 +1798,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeSidebar();
         loginScreen.style.display = 'none';
         appContainer.style.display = 'flex';
+        scheduleTopBarOffset();
     }
 
     function hideApp() {
@@ -2892,6 +2912,7 @@ async function exportBudgetPdf(claimId) {
                 renderReports();
                 break;
         }
+        scheduleTopBarOffset();
     }
 
     // --- View Renderers ---

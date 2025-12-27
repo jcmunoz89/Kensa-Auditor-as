@@ -898,9 +898,14 @@ video {
     }
 
     .top-bar {
-        padding: 0 calc(var(--gap) * 1.2);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: calc(var(--gap) * 0.6 + env(safe-area-inset-top)) calc(var(--gap) * 1.2);
         justify-content: flex-start;
         gap: 0.6rem;
+        z-index: 45;
     }
 
     #page-title {
@@ -914,6 +919,7 @@ video {
 
     #content-area {
         padding: calc(var(--gap) * 1.4);
+        padding-top: calc(var(--gap) * 1.4 + var(--topbar-offset, var(--header-h)));
     }
 
     .sidebar-toggle {
@@ -958,7 +964,7 @@ video {
     .top-bar {
         flex-wrap: wrap;
         height: auto;
-        padding: calc(var(--gap) * 0.9) calc(var(--gap) * 1.1);
+        padding: calc(var(--gap) * 0.9 + env(safe-area-inset-top)) calc(var(--gap) * 1.1);
     }
 
     #page-title {
