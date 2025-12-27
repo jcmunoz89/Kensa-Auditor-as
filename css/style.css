@@ -845,7 +845,9 @@ video {
     flex: 1;
     overflow-y: auto;
     padding: calc(var(--gap) * 2);
+    min-height: 0;
     min-width: 0;
+    -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 1023px) {
@@ -859,11 +861,16 @@ video {
         left: 0;
         top: 0;
         height: 100vh;
+        height: 100dvh;
         width: min(85vw, var(--sidebar-w));
         max-width: var(--sidebar-w);
         transform: translateX(-102%);
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
         z-index: 50;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-top: calc(1.5rem + env(safe-area-inset-top));
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
     }
 
     .sidebar-actions {
@@ -885,7 +892,9 @@ video {
 
     .main {
         min-height: 100vh;
+        min-height: 100dvh;
         height: 100vh;
+        height: 100dvh;
     }
 
     .top-bar {
