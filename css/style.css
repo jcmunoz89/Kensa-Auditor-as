@@ -866,6 +866,10 @@ video {
         z-index: 50;
     }
 
+    .sidebar-actions {
+        display: none;
+    }
+
     body.sidebar-open .sidebar {
         transform: translateX(0);
     }
@@ -1281,6 +1285,10 @@ tr:hover {
 
     .claims-list {
         display: grid;
+    }
+
+    .claims-list-header {
+        display: none;
     }
 }
 
