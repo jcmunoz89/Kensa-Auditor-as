@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Kensa Auditorías - Claims Management</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,9 +45,9 @@
     </div>
 
     <!-- Main App (Hidden until login) -->
-    <div class="app-container" id="appContainer" style="display: none;">
+    <div class="app app-container" id="appContainer" style="display: none;">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="logo-area">
                 <div class="logo-text">
                     <img id="clienteLogoHeader" alt="Logo cliente" style="max-width: 210px; max-height: 71px; display: block; margin-bottom: 0.25rem; object-fit: contain;">
@@ -96,8 +96,11 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main main-content">
             <header class="top-bar">
+                <button class="icon-btn sidebar-toggle" id="sidebarToggle" type="button" aria-label="Abrir menú">
+                    <i class="ph ph-list"></i>
+                </button>
                 <h1 id="page-title">Dashboard</h1>
                 <div class="actions" id="topBarActions"></div>
             </header>
@@ -107,6 +110,7 @@
             </div>
         </main>
     </div>
+    <div class="backdrop" id="sidebarBackdrop"></div>
 
     <!-- Vista Clientes (template) -->
     <template id="clientesViewTemplate">

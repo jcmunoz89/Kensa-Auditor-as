@@ -1660,6 +1660,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginEmail = document.getElementById('loginEmail');
     const loginPassword = document.getElementById('loginPassword');
     const logoutBtn = document.getElementById('logoutBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const mobileSidebarMq = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(max-width: 1023px)')
+        : { matches: false, addEventListener: null };
+
+    const syncSidebarAria = (isOpen) => {
+        if (!sidebar) return;
+        if (mobileSidebarMq.matches) {
+            sidebar.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        } else {
+            sidebar.removeAttribute('aria-hidden');
+        }
+    };
+
+    const closeSidebar = () => {
+        document.body.classList.remove('sidebar-open');
+        syncSidebarAria(false);
+    };
+    const openSidebar = () => {
+        document.body.classList.add('sidebar-open');
+        syncSidebarAria(true);
+    };
+    const toggleSidebar = () => {
+        const isOpen = document.body.classList.toggle('sidebar-open');
+        syncSidebarAria(isOpen);
+    };
 
     // Demo credentials
     const DEMO_EMAIL = 'demo@kensa.cl';
@@ -1748,11 +1776,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showApp() {
+        closeSidebar();
         loginScreen.style.display = 'none';
         appContainer.style.display = 'flex';
     }
 
     function hideApp() {
+        closeSidebar();
         loginScreen.style.display = 'flex';
         appContainer.style.display = 'none';
         loginForm.reset();
@@ -1764,6 +1794,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageTitle = document.getElementById('page-title');
     const topBarActions = document.getElementById('topBarActions');
     const sidebarFiltersContainer = document.getElementById('sidebarFilters');
+    syncSidebarAria(document.body.classList.contains('sidebar-open'));
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleSidebar();
+        });
+    }
+    if (sidebarBackdrop) {
+        sidebarBackdrop.addEventListener('click', closeSidebar);
+    }
+    document.addEventListener('keyup', (e) => {
+        if (e.key === 'Escape') {
+            closeSidebar();
+        }
+    });
+    if (typeof mobileSidebarMq.addEventListener === 'function') {
+        mobileSidebarMq.addEventListener('change', (e) => {
+            if (!e.matches) {
+                closeSidebar();
+            } else {
+                syncSidebarAria(document.body.classList.contains('sidebar-open'));
+            }
+        });
+    }
 
     // Inicializar siniestros desde storage/mock y cargar vista por defecto
     loadClaimsFromStorage();
@@ -1892,26 +1947,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function bindClaimCheckboxEvents() {
-        const tbody = document.getElementById('claimsTableBody');
-        const chkAll = document.getElementById('chkSiniestrosSelectAll');
-        if (!tbody) return;
-        const rowCheckboxes = Array.from(tbody.querySelectorAll('.chk-siniestro'));
+        const rowCheckboxes = Array.from(document.querySelectorAll('#claimsTableBody .chk-siniestro, #claimsCards .chk-siniestro'));
+        const selectAllBoxes = Array.from(document.querySelectorAll('#chkSiniestrosSelectAll, #chkSiniestrosSelectAllMobile')).filter(Boolean);
+        if (!rowCheckboxes.length) return;
+        const claimIds = Array.from(new Set(rowCheckboxes.map(chk => chk.dataset.claimId).filter(Boolean)));
 
-        if (chkAll) {
-            chkAll.checked = selectedClaimIds.size > 0 && selectedClaimIds.size === rowCheckboxes.length;
-            chkAll.indeterminate = selectedClaimIds.size > 0 && selectedClaimIds.size < rowCheckboxes.length;
-            chkAll.onchange = () => {
-                const check = chkAll.checked;
-                selectedClaimIds.clear();
-                rowCheckboxes.forEach(chk => {
-                    chk.checked = check;
-                    if (check && chk.dataset.claimId) {
-                        selectedClaimIds.add(chk.dataset.claimId);
-                    }
-                });
-                updateBulkActionsUI();
-            };
-        }
+        const syncRowCheckboxes = () => {
+            rowCheckboxes.forEach(chk => {
+                const id = chk.dataset.claimId;
+                chk.checked = id ? selectedClaimIds.has(id) : false;
+            });
+        };
+
+        const syncSelectAll = () => {
+            const total = claimIds.length;
+            const visibleSelected = claimIds.filter(id => selectedClaimIds.has(id)).length;
+            selectAllBoxes.forEach(chkAll => {
+                chkAll.checked = total > 0 && visibleSelected === total;
+                chkAll.indeterminate = visibleSelected > 0 && visibleSelected < total;
+            });
+        };
+
+        const handleSelectAllChange = (chkAll) => {
+            const check = chkAll.checked;
+            selectedClaimIds.clear();
+            if (check) {
+                claimIds.forEach(id => selectedClaimIds.add(id));
+            }
+            syncRowCheckboxes();
+            syncSelectAll();
+            updateBulkActionsUI();
+        };
+
+        selectAllBoxes.forEach(chkAll => {
+            chkAll.onchange = () => handleSelectAllChange(chkAll);
+        });
 
         rowCheckboxes.forEach(chk => {
             chk.onchange = (ev) => {
@@ -1923,16 +1993,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     selectedClaimIds.delete(id);
                 }
-
-                if (chkAll) {
-                    const total = rowCheckboxes.length;
-                    const sel = selectedClaimIds.size;
-                    chkAll.checked = sel === total && total > 0;
-                    chkAll.indeterminate = sel > 0 && sel < total;
-                }
+                syncRowCheckboxes();
+                syncSelectAll();
                 updateBulkActionsUI();
             };
         });
+
+        syncRowCheckboxes();
+        syncSelectAll();
     }
 
     function updateBulkActionsUI() {
@@ -2504,6 +2572,9 @@ async function exportBudgetPdf(claimId) {
             // Load View
             const viewName = item.getAttribute('data-view');
             loadView(viewName);
+            if (mobileSidebarMq.matches) {
+                closeSidebar();
+            }
         });
     });
 
@@ -2549,12 +2620,14 @@ async function exportBudgetPdf(claimId) {
     function setClaimsTopBarActions() {
         if (!topBarActions) return;
 
+        topBarActions.classList.add('actions--claims');
         topBarActions.innerHTML = `
             <div class="topbar-search">
                 <input type="text" id="searchClaim" placeholder="ID, Patente o Modelo...">
             </div>
-            <button id="btnNewClaimTop" class="btn-primary" data-open-new-claim="true">
-                <i class="ph ph-plus"></i> Nuevo Siniestro
+            <button id="btnNewClaimTop" class="btn-primary" data-open-new-claim="true" aria-label="Nuevo Siniestro">
+                <i class="ph ph-plus"></i>
+                <span class="btn-label">Nuevo Siniestro</span>
             </button>
         `;
 
@@ -2576,6 +2649,7 @@ async function exportBudgetPdf(claimId) {
 
     function clearTopBarActions() {
         if (topBarActions) {
+            topBarActions.classList.remove('actions--claims');
             topBarActions.innerHTML = '';
         }
     }
@@ -2772,9 +2846,13 @@ async function exportBudgetPdf(claimId) {
     }
 
     function loadView(viewName) {
+        if (mobileSidebarMq.matches) {
+            closeSidebar();
+        }
         contentArea.innerHTML = ''; // Clear current content
         clearTopBarActions();
         clearSidebarFilters();
+        document.body.classList.toggle('is-claims-view', viewName === 'claims');
         navItems.forEach(nav => {
             const navView = nav.getAttribute('data-view');
             nav.classList.toggle('active', navView === viewName);
@@ -2795,11 +2873,15 @@ async function exportBudgetPdf(claimId) {
                 renderClientesView();
                 break;
             case 'claims':
-                pageTitle.textContent = 'Gestión de Siniestros';
+                pageTitle.innerHTML = `
+                    <span class="page-title-text">Gestión de Siniestros</span>
+                    <img id="clienteLogoTopbar" class="page-title-logo" alt="Logo cliente">
+                `;
                 setClaimsTopBarActions();
                 setClaimsSidebarFilters();
                 claimsCurrentPage = 1;
                 renderClaimsList();
+                renderClienteLogoHeader();
                 break;
             case 'audits':
                 pageTitle.textContent = 'Auditoría de Reparaciones';
@@ -3459,14 +3541,28 @@ async function exportBudgetPdf(claimId) {
 
     function renderClienteLogoHeader() {
         const logoEl = document.getElementById('clienteLogoHeader');
-        if (!logoEl) return;
+        const topbarLogoEl = document.getElementById('clienteLogoTopbar');
         const activoConLogo = clientesState.find(c => c.logo);
         if (activoConLogo && activoConLogo.logo) {
-            logoEl.src = activoConLogo.logo;
-            logoEl.style.display = 'block';
+            if (logoEl) {
+                logoEl.src = activoConLogo.logo;
+                logoEl.style.display = 'block';
+            }
+            if (topbarLogoEl) {
+                topbarLogoEl.src = activoConLogo.logo;
+                topbarLogoEl.dataset.hasLogo = 'true';
+                topbarLogoEl.style.removeProperty('display');
+            }
         } else {
-            logoEl.removeAttribute('src');
-            logoEl.style.display = 'none';
+            if (logoEl) {
+                logoEl.removeAttribute('src');
+                logoEl.style.display = 'none';
+            }
+            if (topbarLogoEl) {
+                topbarLogoEl.removeAttribute('src');
+                topbarLogoEl.dataset.hasLogo = 'false';
+                topbarLogoEl.style.removeProperty('display');
+            }
         }
     }
 
@@ -3563,7 +3659,7 @@ async function exportBudgetPdf(claimId) {
                 </div>
 
                 <div class="fade-in">
-                    <div class="grid-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                    <div class="grid-layout">
                         <div class="card">
                             <h3>Costo promedio vs Valores sugeridos</h3>
                             <canvas id="timeChart" style="max-height: 300px;"></canvas>
@@ -3836,28 +3932,39 @@ async function exportBudgetPdf(claimId) {
                     </div>
                 </div>
                 <div class="table-container">
-                    <table id="claimsTable">
-                        <thead>
-                            <tr>
-                                <th class="col-check">
-                                    <input type="checkbox" id="chkSiniestrosSelectAll">
-                                </th>
-                                <th>Siniestro</th>
-                                <th>Vehículo</th>
-                                <th>Patente</th>
-                                <th>Taller</th>
-                                <th>Estado</th>
-                                <th>Tipo</th>
-                                <th>SLA</th>
-                                <th>Creación</th>
-                                <th>Actualización</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="claimsTableBody">
-                            <!-- Rows injected by JS -->
-                        </tbody>
-                    </table>
+                    <div class="claims-table-wrap">
+                        <table id="claimsTable" class="claims-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-check">
+                                        <input type="checkbox" id="chkSiniestrosSelectAll">
+                                    </th>
+                                    <th>Siniestro</th>
+                                    <th>Vehículo</th>
+                                    <th>Patente</th>
+                                    <th>Taller</th>
+                                    <th>Estado</th>
+                                    <th>Tipo</th>
+                                    <th>SLA</th>
+                                    <th>Creación</th>
+                                    <th>Actualización</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="claimsTableBody">
+                                <!-- Rows injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="claims-list" id="claimsList">
+                        <div class="claims-list-header">
+                            <label for="chkSiniestrosSelectAllMobile">
+                                <input type="checkbox" id="chkSiniestrosSelectAllMobile">
+                                <span>Seleccionar todos</span>
+                            </label>
+                        </div>
+                        <div id="claimsCards"></div>
+                    </div>
                     <div class="claims-pagination" id="claimsPagination">
                         <div class="page-size-control">
                             <label for="claimsPageSizeSelect">Mostrar</label>
@@ -3891,6 +3998,7 @@ async function exportBudgetPdf(claimId) {
         claimsFilterWorkshop = workshopFilterValue;
         const workshopFilterKey = workshopKey(workshopFilterValue);
         const tbody = document.getElementById('claimsTableBody');
+        const cardsContainer = document.getElementById('claimsCards');
 
         const filteredClaims = claimsState.filter(claim => {
             const matchesSearch =
@@ -3912,60 +4020,114 @@ async function exportBudgetPdf(claimId) {
         const endIndex = startIndex + claimsPageSize;
         const visibleClaims = filteredClaims.slice(startIndex, endIndex);
 
-        tbody.innerHTML = visibleClaims.map(claim => {
-            let badgeClass = 'status-repair';
-            if (claim.status === 'En revisión') {
-                badgeClass = 'status-parts';
-            }
+        const badgeClassFor = (status) => {
+            if (status === 'En revisión') return 'status-parts';
+            if (status === 'Aprobado') return 'status-qa';
+            return 'status-repair';
+        };
 
-            let slaColor = 'var(--success)';
-            if (claim.sla < 50) slaColor = 'var(--warning)';
-            if (claim.sla < 20) slaColor = 'var(--danger)';
+        const slaColorFor = (sla) => {
+            if (sla < 20) return 'var(--danger)';
+            if (sla < 50) return 'var(--warning)';
+            return 'var(--success)';
+        };
 
-            const tipo = claim.type || '-';
-            const createdParts = formatDateTimeSplit(claim.createdAt);
-            const updatedParts = formatDateTimeSplit(claim.updatedAt);
-            const checked = selectedClaimIds.has(claim.id) ? 'checked' : '';
+        if (tbody) {
+            tbody.innerHTML = visibleClaims.map(claim => {
+                const badgeClass = badgeClassFor(claim.status);
+                const slaColor = slaColorFor(claim.sla);
+                const tipo = claim.type || '-';
+                const createdParts = formatDateTimeSplit(claim.createdAt);
+                const updatedParts = formatDateTimeSplit(claim.updatedAt);
+                const checked = selectedClaimIds.has(claim.id) ? 'checked' : '';
 
-            return `
-                <tr>
-                    <td class="col-check">
-                        <input type="checkbox" class="chk-siniestro" data-claim-id="${claim.id}" ${checked}>
-                    </td>
-                    <td class="claim-id-cell">${claim.id}</td>
-                    <td>${claim.brand} ${claim.model} ${claim.year}</td>
-                    <td>${claim.plate}</td>
-                    <td>${claim.workshop}</td>
-                    <td><span class="status-badge ${badgeClass}">${claim.status}</span></td>
-                    <td>${tipo}</td>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <div style="width: 80px; height: 6px; background: #e2e8f0; border-radius: 3px;">
-                                <div style="width: ${claim.sla}%; height: 100%; background: ${slaColor}; border-radius: 3px;"></div>
+                return `
+                    <tr>
+                        <td class="col-check">
+                            <input type="checkbox" class="chk-siniestro" data-claim-id="${claim.id}" ${checked}>
+                        </td>
+                        <td class="claim-id-cell">${claim.id}</td>
+                        <td>${claim.brand} ${claim.model} ${claim.year}</td>
+                        <td>${claim.plate}</td>
+                        <td>${claim.workshop}</td>
+                        <td><span class="status-badge ${badgeClass}">${claim.status}</span></td>
+                        <td>${tipo}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div style="width: 80px; height: 6px; background: #e2e8f0; border-radius: 3px;">
+                                    <div style="width: ${claim.sla}%; height: 100%; background: ${slaColor}; border-radius: 3px;"></div>
+                                </div>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">${claim.sla}%</span>
                             </div>
-                            <span style="font-size: 0.8rem; color: var(--text-muted);">${claim.sla}%</span>
+                        </td>
+                        <td>
+                            <div class="dt-block">
+                                <span>${createdParts.date}</span>
+                                ${createdParts.time ? `<span class="dt-time">${createdParts.time}</span>` : ''}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="dt-block">
+                                <span>${updatedParts.date}</span>
+                                ${updatedParts.time ? `<span class="dt-time">${updatedParts.time}</span>` : ''}
+                            </div>
+                        </td>
+                        <td>
+                            <button class="icon-btn view-claim-btn" data-id="${claim.id}" title="Ver Detalle">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        if (cardsContainer) {
+            cardsContainer.innerHTML = visibleClaims.map(claim => {
+                const badgeClass = badgeClassFor(claim.status);
+                const slaColor = slaColorFor(claim.sla);
+                const tipo = claim.type || '-';
+                const createdParts = formatDateTimeSplit(claim.createdAt);
+                const updatedParts = formatDateTimeSplit(claim.updatedAt);
+                const checked = selectedClaimIds.has(claim.id) ? 'checked' : '';
+
+                return `
+                    <article class="claim-row-card" data-claim-id="${claim.id}">
+                        <div class="row-top">
+                            <div class="row-id">
+                                <input type="checkbox" class="chk-siniestro" data-claim-id="${claim.id}" ${checked}>
+                                <div>
+                                    <div class="claim-id-cell">${claim.id}</div>
+                                    <div class="claim-vehicle">${claim.brand} ${claim.model} ${claim.year}</div>
+                                </div>
+                            </div>
+                            <span class="status-badge ${badgeClass}">${claim.status}</span>
                         </div>
-                    </td>
-                    <td>
-                        <div class="dt-block">
-                            <span>${createdParts.date}</span>
-                            ${createdParts.time ? `<span class="dt-time">${createdParts.time}</span>` : ''}
+                        <div class="claim-row-meta">
+                            <div><strong>Patente</strong>${claim.plate}</div>
+                            <div><strong>Taller</strong>${claim.workshop}</div>
+                            <div><strong>Tipo</strong>${tipo}</div>
                         </div>
-                    </td>
-                    <td>
-                        <div class="dt-block">
-                            <span>${updatedParts.date}</span>
-                            ${updatedParts.time ? `<span class="dt-time">${updatedParts.time}</span>` : ''}
+                        <div class="claim-row-meta">
+                            <div><strong>Creación</strong>${createdParts.date}${createdParts.time ? ` · <span class="dt-time">${createdParts.time}</span>` : ''}</div>
+                            <div><strong>Actualización</strong>${updatedParts.date}${updatedParts.time ? ` · <span class="dt-time">${updatedParts.time}</span>` : ''}</div>
+                            <div>
+                                <strong>SLA</strong>
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <div style="width: 72px; height: 6px; background: #e2e8f0; border-radius: 3px;">
+                                        <div style="width: ${claim.sla}%; height: 100%; background: ${slaColor}; border-radius: 3px;"></div>
+                                    </div>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted);">${claim.sla}%</span>
+                                </div>
+                            </div>
                         </div>
-                    </td>
-                    <td>
-                        <button class="icon-btn view-claim-btn" data-id="${claim.id}" title="Ver Detalle">
-                            <i class="ph ph-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+                        <div class="claim-card-actions">
+                            <button class="btn-secondary btn-sm view-claim-btn" data-id="${claim.id}" type="button">Ver detalle</button>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
 
         const pageInfo = document.getElementById('claimsPageInfo');
         const prevBtn = document.getElementById('claimsPrevPage');
@@ -4150,7 +4312,7 @@ async function exportBudgetPdf(claimId) {
             return `
                 <div class="card">
                     <h3 style="margin-bottom: 1rem;">Resumen de Costos (${valuation.label})</h3>
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; column-gap: 1.5rem; align-items: stretch;">
+                    <div class="cost-summary-grid">
                         <div style="display: grid; row-gap: 1rem; grid-auto-rows: minmax(0, auto);">
                             <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; display: grid; row-gap: 0.65rem; font-size: 0.9rem;">
                                 <div style="display:flex; justify-content:space-between; gap:0.5rem;">
@@ -4238,24 +4400,26 @@ async function exportBudgetPdf(claimId) {
                         <h3 style="margin:0;">Detalle de Repuestos y Trabajos (${valuation.label})</h3>
                         <span style="font-size:0.8rem;color:var(--text-muted);">Fuente: documento PDF importado</span>
                     </div>
-                    <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Und</th>
-                                <th>Repuesto / Trabajo</th>
-                                <th>Código</th>
-                                <th>Acción</th>
-                                <th>Proveedor</th>
-                                <th>Calidad</th>
-                                <th style="text-align:right;">Días</th>
-                                <th style="text-align:right;">Precio</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsRowsHTML || '<tr><td colspan="8" style="padding:1rem;text-align:center;color:var(--text-muted);">Sin ítems.</td></tr>'}
-                        </tbody>
-                    </table>
+                    <div class="table-wrap">
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Und</th>
+                                    <th>Repuesto / Trabajo</th>
+                                    <th>Código</th>
+                                    <th>Acción</th>
+                                    <th>Proveedor</th>
+                                    <th>Calidad</th>
+                                    <th style="text-align:right;">Días</th>
+                                    <th style="text-align:right;">Precio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsRowsHTML || '<tr><td colspan="9" style="padding:1rem;text-align:center;color:var(--text-muted);">Sin ítems.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             `;
         };
@@ -4279,7 +4443,7 @@ async function exportBudgetPdf(claimId) {
         `;
 
         const contentValuationHTML = hasValuation
-            ? `<div class="grid-layout" style="display:grid;grid-template-columns:1fr;gap:1.5rem;">
+            ? `<div class="grid-layout grid-layout--stack">
                  ${valuationSummaryHTML}
                  ${valuationItemsTableHTML}
                </div>`
@@ -4361,7 +4525,7 @@ async function exportBudgetPdf(claimId) {
                 </div>
 
                 <div id="photosTabSection" data-tab-content="photos">
-                    <div class="grid-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+                    <div class="grid-layout">
                         <div class="card">
                             <h3 style="margin-bottom: 1rem;">Dinámica del Siniestro</h3>
                             <p style="color: var(--text-muted); line-height: 1.6;">
@@ -4551,7 +4715,7 @@ async function exportBudgetPdf(claimId) {
             const selected = valuations.find(v => v.id === valId) || valuations[0];
             if (!selected || !valuationContentContainer) return;
             valuationContentContainer.innerHTML = `
-                <div class="grid-layout" style="display:grid;grid-template-columns:1fr;gap:1.5rem;">
+                <div class="grid-layout grid-layout--stack">
                     ${renderValuationSummaryHTML(selected)}
                     ${renderValuationItemsHTML(selected)}
                 </div>
@@ -5619,7 +5783,7 @@ async function exportBudgetPdf(claimId) {
     function renderReports() {
         const reportsHTML = `
             <div class="fade-in">
-                <div class="grid-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                <div class="grid-layout">
                     <div class="card">
                         <h3>Costo promedio vs Valores sugeridos</h3>
                         <canvas id="timeChart" style="max-height: 300px;"></canvas>
