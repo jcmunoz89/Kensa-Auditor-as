@@ -1377,31 +1377,31 @@ tr:hover {
         order: 1;
     }
 
-    #newClaimForm .form-group--brand {
+    #newClaimForm .form-group--type {
         order: 2;
     }
 
-    #newClaimForm .form-group--model {
+    #newClaimForm .form-group--brand {
         order: 3;
     }
 
-    #newClaimForm .form-group--plate {
+    #newClaimForm .form-group--model {
         order: 4;
     }
 
-    #newClaimForm .form-group--year {
+    #newClaimForm .form-group--plate {
         order: 5;
     }
 
-    #newClaimForm .form-group--workshop {
+    #newClaimForm .form-group--year {
         order: 6;
     }
 
-    #newClaimForm .form-group--adjuster {
+    #newClaimForm .form-group--workshop {
         order: 7;
     }
 
-    #newClaimForm .form-group--type {
+    #newClaimForm .form-group--adjuster {
         order: 8;
     }
 
@@ -1705,9 +1705,36 @@ tr:hover {
     .modal-content {
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
         max-width: none;
         max-height: none;
         border-radius: 0;
+    }
+
+    #newClaimModal .modal-content {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        max-height: 100dvh;
+    }
+
+    #newClaimForm {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #newClaimForm .form-grid {
+        flex: 1;
+    }
+
+    #newClaimForm .modal-footer {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg-card);
+        padding: 1rem 2rem calc(1rem + env(safe-area-inset-bottom));
     }
 }
 
