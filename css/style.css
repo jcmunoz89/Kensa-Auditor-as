@@ -824,6 +824,10 @@ video {
     flex-wrap: wrap;
 }
 
+.claims-pagination .page-controls .btn-secondary {
+    background: #ffffff;
+}
+
 .sidebar-toggle {
     display: none;
     align-items: center;
@@ -1340,6 +1344,12 @@ tr:hover {
         display: none;
     }
 
+    .table-container {
+        background: var(--bg-body);
+        border-color: var(--bg-body);
+        box-shadow: none;
+    }
+
     .claims-pagination .page-size-control {
         display: none;
     }
@@ -1348,6 +1358,55 @@ tr:hover {
         padding: 0.51rem 1.02rem;
         min-height: 37px;
         font-size: 0.85rem;
+    }
+
+    #newClaimForm .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #newClaimForm .form-group {
+        grid-column: 1 / -1;
+        order: 10;
+    }
+
+    #newClaimForm .form-group--half {
+        grid-column: span 1;
+    }
+
+    #newClaimForm .form-group--claim-number {
+        order: 1;
+    }
+
+    #newClaimForm .form-group--brand {
+        order: 2;
+    }
+
+    #newClaimForm .form-group--model {
+        order: 3;
+    }
+
+    #newClaimForm .form-group--plate {
+        order: 4;
+    }
+
+    #newClaimForm .form-group--year {
+        order: 5;
+    }
+
+    #newClaimForm .form-group--workshop {
+        order: 6;
+    }
+
+    #newClaimForm .form-group--adjuster {
+        order: 7;
+    }
+
+    #newClaimForm .form-group--type {
+        order: 8;
+    }
+
+    #newClaimForm .form-group-full {
+        order: 9;
     }
 
     .claim-row-card .claim-meta--workshop,
