@@ -1727,6 +1727,12 @@ tr:hover {
         -webkit-overflow-scrolling: touch;
     }
 
+    #newClaimForm input,
+    #newClaimForm select,
+    #newClaimForm textarea {
+        font-size: 16px;
+    }
+
     #newClaimForm .form-grid {
         flex: 1;
     }
