@@ -993,6 +993,7 @@ video {
     .top-bar .actions .topbar-search input {
         min-width: 0;
         width: 100%;
+        font-size: 16px;
     }
 }
 
