@@ -4248,7 +4248,14 @@ async function exportBudgetPdf(claimId) {
         claim.bitacora = claim.bitacora || [];
         currentAuditClaim = claim;
         const normalizedTabRaw = activeTab || claimDetailActiveTab || 'photos';
-        const normalizedTab = normalizedTabRaw === 'general' ? 'photos' : normalizedTabRaw;
+        let normalizedTab = normalizedTabRaw === 'general' ? 'photos' : normalizedTabRaw;
+        const mobileDetailMq = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(max-width: 768px)')
+            : { matches: false };
+        const photoCaptureAttr = mobileDetailMq.matches ? ' capture="environment"' : '';
+        if (mobileDetailMq.matches && (normalizedTab === 'costs' || normalizedTab === 'auditar')) {
+            normalizedTab = 'photos';
+        }
         claimDetailActiveTab = normalizedTab;
         claimDetailDirty = false;
         if (pageTitle) {
@@ -4604,7 +4611,7 @@ async function exportBudgetPdf(claimId) {
                             
                             <h3 style="margin-bottom: 1rem; margin-top: 2rem;">Evidencia Fotográfica</h3>
                             <div class="photo-upload-controls">
-                                <input type="file" id="photoUploadInput" accept="image/*" multiple style="display:none;" />
+                                <input type="file" id="photoUploadInput" accept="image/*"${photoCaptureAttr} multiple style="display:none;" />
                                 <div class="photo-dropzone" id="photoDropzone">
                                     <div class="photo-dropzone__text">
                                         <strong>Arrastra y suelta fotografías aquí</strong>

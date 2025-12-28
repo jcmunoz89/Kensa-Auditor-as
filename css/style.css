@@ -1458,6 +1458,18 @@ tr:hover {
     border-bottom-color: var(--accent);
 }
 
+@media (max-width: 768px) {
+    .tabs .tab-btn[data-tab="costs"],
+    .tabs .tab-btn[data-tab="auditar"] {
+        display: none;
+    }
+
+    #costsTabSection,
+    #auditTabSection {
+        display: none !important;
+    }
+}
+
 .photo-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
