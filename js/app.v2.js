@@ -14,6 +14,7 @@ let claimDetailDirty = false;
 let claimDetailActiveTab = 'photos';
 let claimDetailActiveValuationId = null;
 let currentAuditClaim = null;
+let isClaimDetailView = false;
 let syncAuditModelFn = null;
 let ensureAuditDataFn = null;
 let claimDetailDirtyBound = false;
@@ -24,6 +25,7 @@ let dashboardFilterAdjuster = '';
 let dashboardFilterValuator = '';
 let dashboardFilterWorkshop = '';
 let dashboardFilterCity = '';
+let dashboardFiltersOpen = false;
 let dashboardRankingMetric = 'riesgo';
 let dashboardRankingTop = 10;
 let dashboardAdjusterRankingMetric = 'desviacion';
@@ -1665,6 +1667,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
     const topBar = document.querySelector('.top-bar');
     const mobileSidebarMq = typeof window.matchMedia === 'function'
         ? window.matchMedia('(max-width: 1023px)')
@@ -1698,6 +1701,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const closeSidebar = () => {
+        if (sidebar && mobileSidebarMq.matches && sidebar.contains(document.activeElement)) {
+            if (sidebarToggle) {
+                sidebarToggle.focus();
+            } else if (document.activeElement) {
+                document.activeElement.blur();
+            }
+        }
         document.body.classList.remove('sidebar-open');
         syncSidebarAria(false);
     };
@@ -1708,6 +1718,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleSidebar = () => {
         const isOpen = document.body.classList.toggle('sidebar-open');
         syncSidebarAria(isOpen);
+    };
+
+    const setSidebarCollapsed = (collapsed) => {
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
+        if (!sidebarCollapseBtn) return;
+        sidebarCollapseBtn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        sidebarCollapseBtn.setAttribute('aria-label', collapsed ? 'Expandir sidebar' : 'Contraer sidebar');
     };
 
     // Demo credentials
@@ -1817,6 +1834,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const topBarActions = document.getElementById('topBarActions');
     const sidebarFiltersContainer = document.getElementById('sidebarFilters');
     syncSidebarAria(document.body.classList.contains('sidebar-open'));
+
+    if (sidebarCollapseBtn) {
+        setSidebarCollapsed(document.body.classList.contains('sidebar-collapsed'));
+        sidebarCollapseBtn.addEventListener('click', () => {
+            if (mobileSidebarMq.matches) return;
+            setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+        });
+    }
 
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', (e) => {
@@ -2147,7 +2172,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="photo-viewer__backdrop"></div>
             <div class="photo-viewer__panel" role="dialog" aria-modal="true" aria-label="Visor de imágenes">
                 <header class="photo-viewer__header">
-                    <span class="photo-viewer__title">Evidencia fotográfica</span>
                     <button type="button" class="photo-viewer__close" aria-label="Cerrar">
                         <i class="ph ph-x"></i>
                     </button>
@@ -2540,7 +2564,8 @@ async function exportBudgetPdf(claimId) {
             <h3 style="margin:0 0 8px;">Guardar cambios</h3>
             <p style="margin:0 0 12px; color: var(--text-muted);">Elige el nuevo estado o solo guarda.</p>
             <div id="saveStatusOptions" style="display:grid;gap:8px; margin-bottom:12px;"></div>
-            <div style="display:flex;justify-content:flex-end; gap:8px;">
+            <div style="display:flex;justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+                <button id="saveStatusSolo" class="btn-primary">Solo guardar</button>
                 <button id="saveStatusBack" class="btn-secondary">Volver</button>
             </div>
         `;
@@ -2560,11 +2585,17 @@ async function exportBudgetPdf(claimId) {
             });
             return b;
         };
-        optionsContainer.appendChild(makeBtn('Solo guardar', 'solo', true));
         remaining.forEach(st => {
             optionsContainer.appendChild(makeBtn(st, st, false));
         });
 
+        const soloBtn = card.querySelector('#saveStatusSolo');
+        if (soloBtn) {
+            soloBtn.addEventListener('click', () => {
+                modal.remove();
+                if (onDone) onDone('solo');
+            });
+        }
         const backBtn = card.querySelector('#saveStatusBack');
         if (backBtn) {
             backBtn.addEventListener('click', () => {
@@ -2879,6 +2910,11 @@ async function exportBudgetPdf(claimId) {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
+            if (isClaimDetailView && claimDetailDirty) {
+                const confirmClose = window.confirm('¿Está seguro de cerrar sin guardar los cambios?');
+                if (!confirmClose) return;
+                claimDetailDirty = false;
+            }
             // Update Active State
             navItems.forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
@@ -2961,9 +2997,34 @@ async function exportBudgetPdf(claimId) {
         }
     }
 
+    function setDashboardTopBarActions() {
+        if (!topBarActions) return;
+
+        topBarActions.classList.add('actions--dashboard');
+        topBarActions.innerHTML = `
+            <button id="btnDashboardFilters" class="btn-secondary btn-dashboard-filters" type="button" aria-expanded="${dashboardFiltersOpen ? 'true' : 'false'}" aria-controls="dashboardFilters">
+                <i class="ph ph-faders-horizontal"></i>
+                <span class="btn-label">Filtros</span>
+            </button>
+        `;
+
+        const btnFilters = document.getElementById('btnDashboardFilters');
+        if (btnFilters) {
+            btnFilters.addEventListener('click', () => {
+                dashboardFiltersOpen = !dashboardFiltersOpen;
+                btnFilters.setAttribute('aria-expanded', dashboardFiltersOpen ? 'true' : 'false');
+                const filtersCard = contentArea.querySelector('.dashboard-filters');
+                if (filtersCard) {
+                    filtersCard.classList.toggle('is-open', dashboardFiltersOpen);
+                }
+            });
+        }
+    }
+
     function clearTopBarActions() {
         if (topBarActions) {
             topBarActions.classList.remove('actions--claims');
+            topBarActions.classList.remove('actions--dashboard');
             topBarActions.innerHTML = '';
         }
     }
@@ -3160,6 +3221,11 @@ async function exportBudgetPdf(claimId) {
     }
 
     function loadView(viewName) {
+        if (isClaimDetailView) {
+            isClaimDetailView = false;
+            claimDetailDirty = false;
+            setSidebarCollapsed(false);
+        }
         if (mobileSidebarMq.matches) {
             closeSidebar();
         }
@@ -3175,6 +3241,8 @@ async function exportBudgetPdf(claimId) {
         switch (viewName) {
             case 'dashboard':
                 pageTitle.textContent = 'Dashboard';
+                dashboardFiltersOpen = false;
+                setDashboardTopBarActions();
                 setDashboardSidebarFilters();
                 renderDashboard();
                 break;
@@ -3954,7 +4022,7 @@ async function exportBudgetPdf(claimId) {
 
         const dashboardHTML = `
             <div class="fade-in">
-                <div class="card dashboard-filters">
+                <div class="card dashboard-filters" id="dashboardFilters">
                     <div class="dash-filters-row">
                         <div class="dash-filter">
                             <label for="dashFilterAdjuster">Liquidador</label>
@@ -4066,6 +4134,10 @@ async function exportBudgetPdf(claimId) {
             </div>
         `;
         contentArea.innerHTML = dashboardHTML;
+        const dashboardFiltersCard = contentArea.querySelector('.dashboard-filters');
+        if (dashboardFiltersCard && mobileSidebarMq.matches) {
+            dashboardFiltersCard.classList.toggle('is-open', dashboardFiltersOpen);
+        }
         const dashAdjusterSel = document.getElementById('dashFilterAdjuster');
         const dashValuatorSel = document.getElementById('dashFilterValuator');
         const dashWorkshopSel = document.getElementById('dashFilterWorkshop');
@@ -4539,6 +4611,8 @@ async function exportBudgetPdf(claimId) {
             contentArea.innerHTML = '<p style="padding:1rem;">No hay siniestros disponibles.</p>';
             return;
         }
+        isClaimDetailView = true;
+        setSidebarCollapsed(true);
         claim.bitacora = claim.bitacora || [];
         currentAuditClaim = claim;
         const normalizedTabRaw = activeTab || claimDetailActiveTab || 'photos';
@@ -4546,7 +4620,6 @@ async function exportBudgetPdf(claimId) {
         const mobileDetailMq = typeof window.matchMedia === 'function'
             ? window.matchMedia('(max-width: 768px)')
             : { matches: false };
-        const photoCaptureAttr = mobileDetailMq.matches ? ' capture="environment"' : '';
         if (mobileDetailMq.matches && (normalizedTab === 'costs' || normalizedTab === 'auditar')) {
             normalizedTab = 'photos';
         }
@@ -4846,25 +4919,31 @@ async function exportBudgetPdf(claimId) {
                         <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
                             <h2 style="margin: 0;">${vehicleHeaderLine}</h2>
                         </div>
-                        <div style="margin-left: 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.9rem; color: var(--text-muted); align-items: flex-start;">
-                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <div class="detail-meta-toggle-row">
+                            <span>Datos generales</span>
+                            <button type="button" class="detail-meta-toggle" id="detailMetaToggle" aria-expanded="false" aria-controls="detailMeta">
+                                <i class="ph ph-caret-down"></i>
+                            </button>
+                        </div>
+                        <div class="detail-meta" id="detailMeta">
+                            <div class="detail-meta-group">
                                 <span><i class="ph ph-user"></i> Liq: ${claim.adjuster}</span>
                                 <span><i class="ph ph-user-circle"></i> Valorado por: ${valuedBy}</span>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <div class="detail-meta-group">
                                 <span><i class="ph ph-car"></i> Tipo de vehículo: ${vehicleType}</span>
                                 <span><i class="ph ph-paint-roller"></i> Tipo de pintura: ${paintType}</span>
                                 <span><i class="ph ph-identification-card"></i> VIN: ${vin}</span>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <div class="detail-meta-group">
                                 <span><i class="ph ph-shield-check"></i> Cobertura: ${coverage}</span>
                                 <span><i class="ph ph-ticket"></i> Nº Aviso: ${avisoNumber}</span>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <div class="detail-meta-group">
                                 <span><i class="ph ph-warehouse"></i> Taller: ${claim.workshop || '-'}</span>
                                 <span><i class="ph ph-map-pin"></i> Ciudad del Taller: ${claim.workshopCity || '-'}</span>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <div class="detail-meta-group">
                                 <span>
                                     <i class="ph ph-clock"></i> Creación:
                                     <span>${createdAtSplit.date}${createdAtSplit.time ? ` ${createdAtSplit.time}` : ''}</span>
@@ -4905,8 +4984,11 @@ async function exportBudgetPdf(claimId) {
                             
                             <h3 style="margin-bottom: 1rem; margin-top: 2rem;">Evidencia Fotográfica</h3>
                             <div class="photo-upload-controls">
-                                <input type="file" id="photoUploadInput" accept="image/*"${photoCaptureAttr} multiple style="display:none;" />
-                                <div class="photo-dropzone" id="photoDropzone">
+                                <input type="file" id="photoUploadInput" accept="image/*" multiple style="display:none;" />
+                                <div class="photo-dropzone" id="photoDropzone" aria-label="Arrastra y suelta fotografías aquí o haz clic para seleccionarlas">
+                                    <div class="photo-dropzone__icon" aria-hidden="true">
+                                        <i class="ph ph-camera"></i>
+                                    </div>
                                     <div class="photo-dropzone__text">
                                         <strong>Arrastra y suelta fotografías aquí</strong>
                                         <span>O haz clic para seleccionarlas desde tu equipo</span>
@@ -5037,6 +5119,22 @@ async function exportBudgetPdf(claimId) {
             </div>
         `;
         contentArea.innerHTML = auditHTML;
+        if (contentArea) {
+            contentArea.scrollTop = 0;
+        }
+        scheduleTopBarOffset();
+        const detailMeta = contentArea.querySelector('#detailMeta');
+        const detailMetaToggle = contentArea.querySelector('#detailMetaToggle');
+        if (detailMeta && detailMetaToggle) {
+            const isResponsive = mobileSidebarMq.matches;
+            detailMeta.classList.toggle('is-open', !isResponsive);
+            detailMetaToggle.setAttribute('aria-expanded', isResponsive ? 'false' : 'true');
+            detailMetaToggle.addEventListener('click', () => {
+                const willOpen = !detailMeta.classList.contains('is-open');
+                detailMeta.classList.toggle('is-open', willOpen);
+                detailMetaToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            });
+        }
         renderBitacora(claim);
         const bitacoraAddBtn = contentArea.querySelector('#bitacoraAddCommentBtn');
         const bitacoraInput = contentArea.querySelector('#bitacoraCommentInput');
