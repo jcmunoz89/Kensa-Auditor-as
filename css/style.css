@@ -50,6 +50,10 @@ body {
     overflow-x: hidden;
 }
 
+body.photo-viewer-open {
+    overflow: hidden;
+}
+
 img,
 svg,
 video {
@@ -1593,9 +1597,40 @@ tr:hover {
     object-position: center;
     transition: transform 0.3s;
     border-radius: 10px;
+    position: relative;
+    z-index: 0;
+    pointer-events: none;
 }
 
 .photo-item:hover img {
+    transform: scale(1.05);
+}
+
+.photo-view-btn {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(15, 23, 42, 0.82);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.9;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    z-index: 2;
+}
+
+.photo-view-btn i {
+    font-size: 1rem;
+}
+
+.photo-view-btn:hover {
+    opacity: 1;
     transform: scale(1.05);
 }
 
@@ -1614,7 +1649,186 @@ tr:hover {
     font-size: 0.75rem;
     font-weight: 600;
     box-shadow: 0 4px 10px rgba(0, 181, 255, 0.35);
+    z-index: 2;
+}
+
+.photo-viewer {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.7);
+    z-index: 1200;
+    padding: 1.5rem;
+}
+
+.photo-viewer__backdrop {
+    position: absolute;
+    inset: 0;
+}
+
+.photo-viewer.active {
+    display: flex;
+}
+
+.photo-viewer__panel {
+    position: relative;
     z-index: 1;
+    width: min(1020px, 100%);
+    max-height: 90vh;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.photo-viewer__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.photo-viewer__title {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.photo-viewer__close {
+    background: transparent;
+    border: none;
+    font-size: 1.3rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.photo-viewer__body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #0f172a;
+}
+
+.photo-viewer__canvas {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    min-height: 240px;
+    touch-action: none;
+    cursor: grab;
+}
+
+.photo-viewer__canvas.is-panning {
+    cursor: grabbing;
+}
+
+.photo-viewer__stage {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+}
+
+.photo-viewer__img {
+    display: block;
+    max-width: 100%;
+    max-height: 70vh;
+    transform-origin: center;
+    transition: transform 0.2s ease;
+    will-change: transform;
+    pointer-events: none;
+}
+
+.photo-viewer__nav {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(15, 23, 42, 0.65);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.photo-viewer__nav:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.photo-viewer__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.photo-viewer__counter {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.photo-viewer__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.photo-viewer__tool {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.photo-viewer__tool i {
+    font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+    .photo-viewer {
+        padding: 0;
+    }
+
+    .photo-viewer__panel {
+        height: 100dvh;
+        max-height: 100dvh;
+        border-radius: 0;
+    }
+
+    .photo-viewer__body {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .photo-viewer__img {
+        max-height: 60vh;
+    }
+
+    .photo-viewer__toolbar {
+        padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+    }
 }
 
 /* Modal Styles */

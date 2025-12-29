@@ -40,6 +40,8 @@ let clienteLogoTemp = null;
 let clienteLogoAuditorTemp = null;
 let bitacoraActiveFilter = null;
 let analysisToastTimers = [];
+let photoViewerState = null;
+let photoViewerRefs = null;
 function showAnalysisToast() {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -2113,7 +2115,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const items = contentArea.querySelectorAll('.photo-item');
         if (!items || !items.length) return;
         items.forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (event) => {
+                if (event.target.closest('.photo-view-btn')) return;
                 const idx = Number(item.getAttribute('data-photo-idx'));
                 if (Number.isNaN(idx)) return;
                 if (!Array.isArray(claim.photoHighlights)) claim.photoHighlights = [];
@@ -2130,6 +2133,297 @@ document.addEventListener('DOMContentLoaded', () => {
                 touchClaimUpdatedAt(claim);
                 saveClaimsToStorage();
                 renderAuditDetail(claim.id, claimDetailActiveTab || 'photos');
+            });
+        });
+    }
+
+    function ensurePhotoViewer() {
+        if (photoViewerRefs) return photoViewerRefs;
+        const viewer = document.createElement('div');
+        viewer.id = 'photoViewer';
+        viewer.className = 'photo-viewer';
+        viewer.setAttribute('aria-hidden', 'true');
+        viewer.innerHTML = `
+            <div class="photo-viewer__backdrop"></div>
+            <div class="photo-viewer__panel" role="dialog" aria-modal="true" aria-label="Visor de imágenes">
+                <header class="photo-viewer__header">
+                    <span class="photo-viewer__title">Evidencia fotográfica</span>
+                    <button type="button" class="photo-viewer__close" aria-label="Cerrar">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </header>
+                <div class="photo-viewer__body">
+                    <button type="button" class="photo-viewer__nav photo-viewer__nav--prev" aria-label="Anterior">
+                        <i class="ph ph-caret-left"></i>
+                    </button>
+                    <div class="photo-viewer__canvas">
+                        <div class="photo-viewer__stage">
+                            <img class="photo-viewer__img" alt="Foto de siniestro">
+                        </div>
+                    </div>
+                    <button type="button" class="photo-viewer__nav photo-viewer__nav--next" aria-label="Siguiente">
+                        <i class="ph ph-caret-right"></i>
+                    </button>
+                </div>
+                <footer class="photo-viewer__toolbar">
+                    <div class="photo-viewer__counter">0 / 0</div>
+                    <div class="photo-viewer__tools">
+                        <button type="button" class="photo-viewer__tool" data-action="zoom-out" aria-label="Alejar">
+                            <i class="ph ph-magnifying-glass-minus"></i>
+                        </button>
+                        <button type="button" class="photo-viewer__tool" data-action="zoom-in" aria-label="Acercar">
+                            <i class="ph ph-magnifying-glass-plus"></i>
+                        </button>
+                        <button type="button" class="photo-viewer__tool" data-action="rotate-left" aria-label="Voltear a la izquierda">
+                            <i class="ph ph-arrow-counter-clockwise"></i>
+                        </button>
+                        <button type="button" class="photo-viewer__tool" data-action="flip-x" aria-label="Invertir horizontal">
+                            <i class="ph ph-flip-horizontal"></i>
+                        </button>
+                        <button type="button" class="photo-viewer__tool" data-action="flip-y" aria-label="Invertir vertical">
+                            <i class="ph ph-flip-vertical"></i>
+                        </button>
+                    </div>
+                </footer>
+            </div>
+        `;
+        document.body.appendChild(viewer);
+
+        const refs = {
+            viewer,
+            backdrop: viewer.querySelector('.photo-viewer__backdrop'),
+            panel: viewer.querySelector('.photo-viewer__panel'),
+            canvas: viewer.querySelector('.photo-viewer__canvas'),
+            stage: viewer.querySelector('.photo-viewer__stage'),
+            img: viewer.querySelector('.photo-viewer__img'),
+            counter: viewer.querySelector('.photo-viewer__counter'),
+            prevBtn: viewer.querySelector('.photo-viewer__nav--prev'),
+            nextBtn: viewer.querySelector('.photo-viewer__nav--next'),
+            closeBtn: viewer.querySelector('.photo-viewer__close'),
+            tools: Array.from(viewer.querySelectorAll('.photo-viewer__tool'))
+        };
+
+        const clampIndex = (idx, total) => {
+            if (!Number.isFinite(idx) || total <= 0) return 0;
+            return Math.min(Math.max(idx, 0), total - 1);
+        };
+
+        const update = () => {
+            if (!photoViewerState) return;
+            const photos = photoViewerState.photos || [];
+            const total = photos.length;
+            const index = clampIndex(photoViewerState.index, total);
+            photoViewerState.index = index;
+            if (refs.counter) {
+                refs.counter.textContent = total ? `${index + 1} / ${total}` : '0 / 0';
+            }
+            if (refs.img) {
+                refs.img.src = photos[index] || '';
+                const zoom = photoViewerState.zoom || 1;
+                const rotate = photoViewerState.rotate || 0;
+                const flipX = photoViewerState.flipX === -1 ? 180 : 0;
+                const flipY = photoViewerState.flipY === -1 ? 180 : 0;
+                refs.img.style.transform = `scale(${zoom}) rotate(${rotate}deg) rotateY(${flipX}deg) rotateX(${flipY}deg)`;
+            }
+            if (refs.stage) {
+                const offsetX = photoViewerState.offsetX || 0;
+                const offsetY = photoViewerState.offsetY || 0;
+                refs.stage.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+            }
+            if (refs.prevBtn) refs.prevBtn.disabled = index <= 0;
+            if (refs.nextBtn) refs.nextBtn.disabled = index >= total - 1;
+        };
+
+        const close = () => {
+            viewer.classList.remove('active');
+            viewer.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('photo-viewer-open');
+            photoViewerState = null;
+        };
+
+        const setIndex = (idx) => {
+            if (!photoViewerState) return;
+            photoViewerState.index = idx;
+            photoViewerState.offsetX = 0;
+            photoViewerState.offsetY = 0;
+            update();
+        };
+
+        const clampZoom = (value) => Math.min(Math.max(value, 0.5), 4);
+
+        const adjustZoom = (delta) => {
+            if (!photoViewerState) return;
+            const next = (photoViewerState.zoom || 1) + delta;
+            photoViewerState.zoom = clampZoom(next);
+            if (photoViewerState.zoom <= 1) {
+                photoViewerState.offsetX = 0;
+                photoViewerState.offsetY = 0;
+            }
+            update();
+        };
+
+        const toggleFlip = (axis) => {
+            if (!photoViewerState) return;
+            if (axis === 'x') {
+                photoViewerState.flipX = (photoViewerState.flipX || 1) * -1;
+            } else {
+                photoViewerState.flipY = (photoViewerState.flipY || 1) * -1;
+            }
+            update();
+        };
+
+        if (refs.backdrop) {
+            refs.backdrop.addEventListener('click', close);
+        }
+        if (refs.closeBtn) {
+            refs.closeBtn.addEventListener('click', close);
+        }
+        if (refs.prevBtn) {
+            refs.prevBtn.addEventListener('click', () => {
+                if (!photoViewerState) return;
+                setIndex(photoViewerState.index - 1);
+            });
+        }
+        if (refs.nextBtn) {
+            refs.nextBtn.addEventListener('click', () => {
+                if (!photoViewerState) return;
+                setIndex(photoViewerState.index + 1);
+            });
+        }
+        if (refs.tools.length) {
+            refs.tools.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const action = btn.dataset.action;
+                    if (action === 'zoom-in') adjustZoom(0.2);
+                    if (action === 'zoom-out') adjustZoom(-0.2);
+                    if (action === 'rotate-left') {
+                        if (photoViewerState) {
+                            const next = (photoViewerState.rotate || 0) - 90;
+                            photoViewerState.rotate = ((next % 360) + 360) % 360;
+                        }
+                        update();
+                    }
+                    if (action === 'flip-x') toggleFlip('x');
+                    if (action === 'flip-y') toggleFlip('y');
+                });
+            });
+        }
+
+        if (refs.canvas) {
+            let isPanning = false;
+            let startX = 0;
+            let startY = 0;
+            let startOffsetX = 0;
+            let startOffsetY = 0;
+            let activePointerId = null;
+
+            const endPan = () => {
+                isPanning = false;
+                activePointerId = null;
+                if (refs.canvas) refs.canvas.classList.remove('is-panning');
+            };
+
+            refs.canvas.addEventListener('pointerdown', (event) => {
+                if (!photoViewerState) return;
+                if ((photoViewerState.zoom || 1) <= 1) return;
+                event.preventDefault();
+                isPanning = true;
+                activePointerId = event.pointerId;
+                startX = event.clientX;
+                startY = event.clientY;
+                startOffsetX = photoViewerState.offsetX || 0;
+                startOffsetY = photoViewerState.offsetY || 0;
+                refs.canvas.setPointerCapture(event.pointerId);
+                refs.canvas.classList.add('is-panning');
+            });
+
+            refs.canvas.addEventListener('pointermove', (event) => {
+                if (!isPanning || event.pointerId !== activePointerId || !photoViewerState) return;
+                event.preventDefault();
+                const dx = event.clientX - startX;
+                const dy = event.clientY - startY;
+                photoViewerState.offsetX = startOffsetX + dx;
+                photoViewerState.offsetY = startOffsetY + dy;
+                update();
+            });
+
+            refs.canvas.addEventListener('pointerup', endPan);
+            refs.canvas.addEventListener('pointercancel', endPan);
+            refs.canvas.addEventListener('pointerleave', endPan);
+
+            refs.canvas.addEventListener('wheel', (event) => {
+                if (!photoViewerState) return;
+                event.preventDefault();
+                const rect = refs.canvas.getBoundingClientRect();
+                const cx = rect.width / 2;
+                const cy = rect.height / 2;
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                const oldZoom = photoViewerState.zoom || 1;
+                const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
+                const newZoom = clampZoom(oldZoom * zoomFactor);
+                if (newZoom === oldZoom) return;
+                const ratio = newZoom / oldZoom;
+                const offsetX = photoViewerState.offsetX || 0;
+                const offsetY = photoViewerState.offsetY || 0;
+                photoViewerState.offsetX = offsetX * ratio + (1 - ratio) * (x - cx);
+                photoViewerState.offsetY = offsetY * ratio + (1 - ratio) * (y - cy);
+                photoViewerState.zoom = newZoom;
+                if (photoViewerState.zoom <= 1) {
+                    photoViewerState.offsetX = 0;
+                    photoViewerState.offsetY = 0;
+                }
+                update();
+            }, { passive: false });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (!viewer.classList.contains('active') || !photoViewerState) return;
+            if (event.key === 'Escape') {
+                close();
+                return;
+            }
+            if (event.key === 'ArrowLeft') {
+                setIndex(photoViewerState.index - 1);
+            }
+            if (event.key === 'ArrowRight') {
+                setIndex(photoViewerState.index + 1);
+            }
+        });
+
+        photoViewerRefs = { ...refs, update, close, setIndex };
+        return photoViewerRefs;
+    }
+
+    function openPhotoViewer(claim, startIndex) {
+        const refs = ensurePhotoViewer();
+        const photos = Array.isArray(claim.photos) ? claim.photos.filter(Boolean) : [];
+        if (!photos.length) return;
+        photoViewerState = {
+            photos,
+            index: Number.isFinite(startIndex) ? startIndex : 0,
+            zoom: 1,
+            flipX: 1,
+            flipY: 1,
+            rotate: 0,
+            offsetX: 0,
+            offsetY: 0
+        };
+        refs.viewer.classList.add('active');
+        refs.viewer.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('photo-viewer-open');
+        refs.update();
+    }
+
+    function bindPhotoViewer(claim) {
+        const buttons = contentArea.querySelectorAll('.photo-view-btn');
+        if (!buttons || !buttons.length) return;
+        buttons.forEach(btn => {
+            btn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const idx = Number(btn.getAttribute('data-photo-idx'));
+                if (Number.isNaN(idx)) return;
+                openPhotoViewer(claim, idx);
             });
         });
     }
@@ -4626,6 +4920,9 @@ async function exportBudgetPdf(claimId) {
                                     return `
                                         <div class="photo-item ${pos !== -1 ? 'photo-selected' : ''}" data-photo-idx="${idx}">
                                             ${label ? `<span class="photo-badge">${label}</span>` : ''}
+                                            <button type="button" class="photo-view-btn" data-photo-idx="${idx}" aria-label="Ver imagen">
+                                                <i class="ph ph-eye"></i>
+                                            </button>
                                             <img src="${photo}" alt="Daño">
                                         </div>
                                     `;
@@ -4774,6 +5071,7 @@ async function exportBudgetPdf(claimId) {
         }
         bindPhotoUploadControls(claim);
         bindPhotoSelection(claim);
+        bindPhotoViewer(claim);
         ensureClaimDetailDirtyTracking();
         const valuationContentContainer = contentArea.querySelector('#valuationContent');
         const valuationTabs = contentArea.querySelectorAll('#valuationTabs .valuation-tab');
