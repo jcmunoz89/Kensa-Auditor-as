@@ -460,19 +460,18 @@
                         <label for="workshop">Taller</label>
                         <select id="workshop" required>
                             <option value="">Seleccionar...</option>
-                            <option value="central">Taller Central</option>
-                            <option value="autofactoria">Autofactoria</option>
-                            <option value="express">Mecánica Express</option>
+                            <option value="central">Sociedad rutakar spa</option>
+                            <option value="autofactoria">Servicio automotriz raul jovino</option>
+                            <option value="express">Comercial hm limitada</option>
                         </select>
                     </div>
                     <div class="form-group form-group--adjuster">
                         <label for="adjuster">Liquidador</label>
                         <select id="adjuster" required>
                             <option value="">Seleccionar...</option>
-                            <option value="juan">Juan Muñoz</option>
-                            <option value="maria">María González</option>
-                            <option value="carlos">Carlos Pérez</option>
-                            <option value="ana">Ana Silva</option>
+                            <option value="juan">Ignacio Enrique Castro Bravo</option>
+                            <option value="maria">Hugo Jara</option>
+                            <option value="carlos">Vladimir Zuvic Benitez</option>
                         </select>
                     </div>
                     <div class="form-group form-group--half form-group--type">
@@ -563,25 +562,28 @@
                     <div class="table table--saving">
                         <div class="table__row table__row--head">
                             <div class="table__cell w-25">Pieza</div>
-                            <div class="table__cell w-35">Observación</div>
-                            <div class="table__cell w-15 ta-right">Ajuste Liq. (HH)</div>
-                            <div class="table__cell w-15 ta-right">Sugerido (HH)</div>
+                            <div class="table__cell w-35 report-col-obstec">OBS. TÉCNICA</div>
+                            <div class="table__cell w-10 report-col-obsrep">OBS. REPUESTOS</div>
+                            <div class="table__cell w-10 ta-right">Ajuste Liq. (HH)</div>
+                            <div class="table__cell w-10 ta-right">Sugerido (HH)</div>
                             <div class="table__cell w-10 ta-right">Ahorro ($)</div>
                         </div>
                         <div class="table__body" id="reportTableBody">
                             <div class="table__row">
                                 <div class="table__cell w-25">{{pieza_1}}</div>
-                                <div class="table__cell w-35">{{obs_1}}</div>
-                                <div class="table__cell w-15 ta-right">{{ajuste_1}}</div>
-                                <div class="table__cell w-15 ta-right">{{sugerido_1}}</div>
+                                <div class="table__cell w-35 report-col-obstec">{{obs_1}}</div>
+                                <div class="table__cell w-10 report-col-obsrep">{{obs_repuestos_1}}</div>
+                                <div class="table__cell w-10 ta-right">{{ajuste_1}}</div>
+                                <div class="table__cell w-10 ta-right">{{sugerido_1}}</div>
                                 <div class="table__cell w-10 ta-right">{{ahorro_1}}</div>
                             </div>
                         </div>
                         <div class="table__row table__row--foot">
                             <div class="table__cell w-25"></div>
-                            <div class="table__cell w-35"></div>
-                            <div class="table__cell w-15 ta-right"></div>
-                            <div class="table__cell w-15 ta-right"><strong>Total (Pesos)</strong></div>
+                            <div class="table__cell w-35 report-col-obstec"></div>
+                            <div class="table__cell w-10 report-col-obsrep ta-right"></div>
+                            <div class="table__cell w-10 ta-right"></div>
+                            <div class="table__cell w-10 ta-right"><strong>Total (Pesos)</strong></div>
                             <div class="table__cell w-10 ta-right"><strong>{{total_pesos}}</strong></div>
                         </div>
                     </div>

@@ -2593,6 +2593,52 @@ tr:hover {
     min-width: 140px;
 }
 
+.dashboard-results-card {
+    margin-top: var(--gap);
+}
+
+.dashboard-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-results-subtitle {
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.dashboard-results-count {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+}
+
+.dashboard-results-table {
+    margin-top: 1rem;
+}
+
+.dashboard-claims-table {
+    min-width: 1600px;
+    width: 100%;
+}
+
+.dashboard-claims-table th,
+.dashboard-claims-table td {
+    white-space: nowrap;
+}
+
+.dashboard-pagination {
+    padding: 0.75rem 0 0;
+    justify-content: space-between;
+}
+
 .workshop-ranking {
     display: flex;
     flex-direction: column;
@@ -3752,6 +3798,10 @@ tr:hover {
     white-space: normal;
 }
 
+.audit-report .table__row--head .report-col-obstec {
+    padding-left: 1cm;
+}
+
 .audit-report .table__cell {
     padding: 6px 8px;
     border-bottom: 1px solid #eef2f6;
@@ -3767,9 +3817,17 @@ tr:hover {
 .audit-report .w-10 { width: 10%; }
 .audit-report .ta-right { text-align: right; }
 
-/* Desplazar solo la columna Observación hacia la derecha */
-.audit-report .table__cell.w-35 {
-    padding-left: 100px;
+/* Ajuste de OBS. TÉCNICA y OBS. REPUESTOS */
+.audit-report .report-col-obstec {
+    width: 20%;
+    padding-left: 1cm;
+}
+
+.audit-report .report-col-obsrep {
+    width: 25%;
+    padding-left: 0.3cm;
+    padding-right: 1cm;
+    white-space: nowrap;
 }
 
 .audit-report .table__body {
@@ -3789,6 +3847,10 @@ tr:hover {
 .audit-report .table__row--foot {
     background: #f0f0f0;
     font-weight: 800;
+}
+
+.audit-report .table__row--foot .table__cell strong {
+    white-space: nowrap;
 }
 
 .audit-report .doc-footer {

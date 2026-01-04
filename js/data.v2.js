@@ -2,7 +2,7 @@
 const MOCK_DATA = {
     claims: [
         {
-            id: 'CLM-2024-889', brand: 'Toyota', model: 'Corolla', year: 2022, plate: 'KLPY-99', workshop: 'Taller Central', status: 'Siniestro de Alta', sla: 80, adjuster: 'Juan Muñoz', cost: 630000, date: '2024-11-20', createdAt: '2024-11-20T10:00:00Z', updatedAt: '2024-11-20T10:00:00Z',
+            id: 'CLM-2024-889', brand: 'Toyota', model: 'Corolla', year: 2022, plate: 'KLPY-99', workshop: 'Sociedad rutakar spa', status: 'Siniestro de Alta', sla: 80, adjuster: 'Ignacio Enrique Castro Bravo', cost: 630000, date: '2024-11-20', createdAt: '2024-11-20T10:00:00Z', updatedAt: '2024-11-20T10:00:00Z',
             description: 'Colisión por alcance en parachoques trasero. Tercero culpable.',
             photos: [
                 'https://images.unsplash.com/photo-1599525567636-646840647892?q=80&w=400&auto=format&fit=crop',
@@ -14,7 +14,7 @@ const MOCK_DATA = {
             ]
         },
         {
-            id: 'CLM-2024-890', brand: 'Mazda', model: 'CX-5', year: 2023, plate: 'LPRT-22', workshop: 'Autofactoria', status: 'Con observaciones', sla: 40, adjuster: 'María González', cost: 1200000, date: '2024-11-25', createdAt: '2024-11-25T10:00:00Z', updatedAt: '2024-11-25T10:00:00Z',
+            id: 'CLM-2024-890', brand: 'Mazda', model: 'CX-5', year: 2023, plate: 'LPRT-22', workshop: 'Servicio automotriz raul jovino', status: 'Con observaciones', sla: 40, adjuster: 'Hugo Jara', cost: 1200000, date: '2024-11-25', createdAt: '2024-11-25T10:00:00Z', updatedAt: '2024-11-25T10:00:00Z',
             description: 'Choque lateral derecho. Puerta y tapabarro afectados.',
             photos: [
                 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?q=80&w=400&auto=format&fit=crop'
@@ -24,11 +24,11 @@ const MOCK_DATA = {
                 { name: 'Pintura Lateral', price: 400000 }
             ]
         },
-        { id: 'CLM-2024-891', brand: 'Chevrolet', model: 'Sail', year: 2021, plate: 'JJHH-11', workshop: 'Mecánica Express', status: 'En revisión', sla: 60, adjuster: 'Carlos Pérez', cost: 450000, date: '2024-11-28', createdAt: '2024-11-28T10:00:00Z', updatedAt: '2024-11-28T10:00:00Z', description: 'Golpe frontal leve.', photos: [], repairItems: [] },
-        { id: 'CLM-2024-892', brand: 'Ford', model: 'Ranger', year: 2024, plate: 'PPLK-88', workshop: 'Taller Central', status: 'Ingresado', sla: 10, adjuster: 'Ana Silva', cost: 0, date: '2024-12-01', createdAt: '2024-12-01T10:00:00Z', updatedAt: '2024-12-01T10:00:00Z', description: 'Ingreso por evaluación.', photos: [], repairItems: [] },
-        { id: 'CLM-2024-893', brand: 'Nissan', model: 'Kicks', year: 2020, plate: 'HHYT-55', workshop: 'Autofactoria', status: 'En revisión', sla: 55, adjuster: 'Juan Muñoz', cost: 890000, date: '2024-11-22', createdAt: '2024-11-22T10:00:00Z', updatedAt: '2024-11-22T10:00:00Z', description: 'Reparación de abolladura puerta.', photos: [], repairItems: [] },
-        { id: 'CLM-2024-894', brand: 'Hyundai', model: 'Tucson', year: 2022, plate: 'KKLL-33', workshop: 'Mecánica Express', status: 'Siniestro de Alta', sla: 90, adjuster: 'María González', cost: 1500000, date: '2024-11-15', createdAt: '2024-11-15T10:00:00Z', updatedAt: '2024-11-15T10:00:00Z', description: 'Cambio de frontal completo.', photos: [], repairItems: [] },
-        { id: 'CLM-2024-895', brand: 'Kia', model: 'Sportage', year: 2023, plate: 'MMNN-44', workshop: 'Taller Central', status: 'Con observaciones', sla: 30, adjuster: 'Carlos Pérez', cost: 2100000, date: '2024-11-29', createdAt: '2024-11-29T10:00:00Z', updatedAt: '2024-11-29T10:00:00Z', description: 'Espera de repuestos importados.', photos: [], repairItems: [] }
+        { id: 'CLM-2024-891', brand: 'Chevrolet', model: 'Sail', year: 2021, plate: 'JJHH-11', workshop: 'Comercial hm limitada', status: 'En revisión', sla: 60, adjuster: 'Vladimir Zuvic Benitez', cost: 450000, date: '2024-11-28', createdAt: '2024-11-28T10:00:00Z', updatedAt: '2024-11-28T10:00:00Z', description: 'Golpe frontal leve.', photos: [], repairItems: [] },
+        { id: 'CLM-2024-892', brand: 'Ford', model: 'Ranger', year: 2024, plate: 'PPLK-88', workshop: 'Sociedad rutakar spa', status: 'Ingresado', sla: 10, adjuster: 'Ignacio Enrique Castro Bravo', cost: 0, date: '2024-12-01', createdAt: '2024-12-01T10:00:00Z', updatedAt: '2024-12-01T10:00:00Z', description: 'Ingreso por evaluación.', photos: [], repairItems: [] },
+        { id: 'CLM-2024-893', brand: 'Nissan', model: 'Kicks', year: 2020, plate: 'HHYT-55', workshop: 'Servicio automotriz raul jovino', status: 'En revisión', sla: 55, adjuster: 'Ignacio Enrique Castro Bravo', cost: 890000, date: '2024-11-22', createdAt: '2024-11-22T10:00:00Z', updatedAt: '2024-11-22T10:00:00Z', description: 'Reparación de abolladura puerta.', photos: [], repairItems: [] },
+        { id: 'CLM-2024-894', brand: 'Hyundai', model: 'Tucson', year: 2022, plate: 'KKLL-33', workshop: 'Comercial hm limitada', status: 'Siniestro de Alta', sla: 90, adjuster: 'Hugo Jara', cost: 1500000, date: '2024-11-15', createdAt: '2024-11-15T10:00:00Z', updatedAt: '2024-11-15T10:00:00Z', description: 'Cambio de frontal completo.', photos: [], repairItems: [] },
+        { id: 'CLM-2024-895', brand: 'Kia', model: 'Sportage', year: 2023, plate: 'MMNN-44', workshop: 'Sociedad rutakar spa', status: 'Con observaciones', sla: 30, adjuster: 'Vladimir Zuvic Benitez', cost: 2100000, date: '2024-11-29', createdAt: '2024-11-29T10:00:00Z', updatedAt: '2024-11-29T10:00:00Z', description: 'Espera de repuestos importados.', photos: [], repairItems: [] }
     ]
 };
 

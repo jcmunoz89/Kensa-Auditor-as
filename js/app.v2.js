@@ -30,6 +30,8 @@ let dashboardRankingMetric = 'riesgo';
 let dashboardRankingTop = 10;
 let dashboardAdjusterRankingMetric = 'desviacion';
 let dashboardAdjusterRankingTop = 10;
+let dashboardResultsPageSize = 5;
+let dashboardResultsPage = 1;
 
 // Estado Clientes
 let clientesState = [];
@@ -459,6 +461,7 @@ function commitClaimDetailEdits(claimId, opts = {}) {
             const pintVal = getNum('pintura');
             const sugVal = getNum('sugerido');
             const obsVal = getText('observacion');
+            const obsRepVal = getText('observacionRepuestos');
             const mecVal = getNum('mecanica');
             const dymVal = getNum('dym');
 
@@ -467,6 +470,7 @@ function commitClaimDetailEdits(claimId, opts = {}) {
             if (pintVal !== null && pintVal !== line.pintura) { line.pintura = pintVal; mutated = true; }
             if (sugVal !== null && sugVal !== line.sugerido) { line.sugerido = sugVal; mutated = true; }
             if (obsVal !== undefined && obsVal !== line.observacion) { line.observacion = obsVal; mutated = true; }
+            if (obsRepVal !== undefined && obsRepVal !== line.observacionRepuestos) { line.observacionRepuestos = obsRepVal; mutated = true; }
             if (mecVal !== null && mecVal !== line.mecanica) { line.mecanica = mecVal; mutated = true; }
             if (dymVal !== null && dymVal !== line.dym) { line.dym = dymVal; mutated = true; }
         });
@@ -3164,12 +3168,14 @@ async function exportBudgetPdf(claimId) {
         if (startInput) {
             startInput.addEventListener('change', () => {
                 dashboardFilterStart = startInput.value;
+                dashboardResultsPage = 1;
                 renderDashboard();
             });
         }
         if (endInput) {
             endInput.addEventListener('change', () => {
                 dashboardFilterEnd = endInput.value;
+                dashboardResultsPage = 1;
                 renderDashboard();
             });
         }
@@ -3177,6 +3183,7 @@ async function exportBudgetPdf(claimId) {
             clearBtn.addEventListener('click', () => {
                 dashboardFilterStart = '';
                 dashboardFilterEnd = '';
+                dashboardResultsPage = 1;
                 renderDashboard();
             });
         }
@@ -3986,8 +3993,27 @@ async function exportBudgetPdf(claimId) {
     }
 
     function renderDashboard() {
+        const responsiveMq = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(max-width: 768px)')
+            : { matches: false };
+        const maxDashboardResultsPageSize = responsiveMq.matches ? 20 : 50;
+        if (dashboardResultsPageSize > maxDashboardResultsPageSize) {
+            dashboardResultsPageSize = maxDashboardResultsPageSize;
+        }
         const claims = getDashboardFilteredClaims();
         const activeCount = claims.length;
+        const totalPages = Math.max(1, Math.ceil(activeCount / dashboardResultsPageSize));
+        if (dashboardResultsPage > totalPages) {
+            dashboardResultsPage = totalPages;
+        }
+        if (dashboardResultsPage < 1) {
+            dashboardResultsPage = 1;
+        }
+        const pageStart = (dashboardResultsPage - 1) * dashboardResultsPageSize;
+        const pageEnd = pageStart + dashboardResultsPageSize;
+        const pagedClaims = claims.slice(pageStart, pageEnd);
+        const dashboardResultsInfo = `Página ${dashboardResultsPage} de ${totalPages}`;
+        const hasDashboardResults = activeCount > 0;
         const criticalSla = claims.filter(claim => claim.sla < 20).length;
         const pendingAudits = claims.filter(claim => claim.status === 'Ingresado').length;
         const { avgUf, sampleCount } = computeAverageSubtotalUf(claims);
@@ -4019,7 +4045,85 @@ async function exportBudgetPdf(claimId) {
         const valuatorOptions = uniqueSorted(claimsState.map(c => c.valuedBy || c.valorador || c.evaluator || '')).map(val => `<option value="${escapeHtml(val)}"${dashboardFilterValuator === val ? ' selected' : ''}>${escapeHtml(val)}</option>`).join('');
         const workshopOptions = uniqueSorted(claimsState.map(c => c.workshop || '')).map(val => `<option value="${escapeHtml(val)}"${dashboardFilterWorkshop === val ? ' selected' : ''}>${escapeHtml(val)}</option>`).join('');
         const cityOptions = uniqueSorted(claimsState.map(c => c.workshopCity || '')).map(val => `<option value="${escapeHtml(val)}"${dashboardFilterCity === val ? ' selected' : ''}>${escapeHtml(val)}</option>`).join('');
-
+        const ufVal = getEffectiveUfValue();
+        const pickMoneyValue = (...candidates) => {
+            for (const val of candidates) {
+                if (typeof val === 'number' && Number.isFinite(val)) return val;
+                const parsed = parseMoneyCLPStrict(val);
+                if (parsed != null) return parsed;
+            }
+            return null;
+        };
+        const formatClpValue = (value) => (Number.isFinite(value) ? fmtCLP(value) : '-');
+        const formatUfValue = (value) => (Number.isFinite(value) ? `${value.toFixed(2)} UF` : '-');
+        const safeText = (value) => escapeHtml(value === null || value === undefined || value === '' ? '-' : String(value));
+        const getDashboardClaimEntry = (claim) => {
+            const valuation = pickPreferredValuation(claim);
+            const summary = valuation?.summary || {};
+            const audit = valuation && claim.auditByValuation ? claim.auditByValuation[valuation.id] || null : null;
+            return {
+                id: claim.id || '',
+                adjuster: claim.adjuster || claim.liquidator || '',
+                valuator: claim.valuedBy || claim.valorador || claim.evaluator || (valuation?.document?.uploadedBy) || '',
+                workshop: claim.workshop || claim.taller || '',
+                brand: claim.brand || '',
+                model: claim.model || '',
+                plate: claim.plate || claim.patente || '',
+                year: claim.year ? String(claim.year) : '',
+                chassis: claim.chassis || claim.vin || '',
+                paintTotal: pickMoneyValue(
+                    summary.paintTotal, summary.totalPaint, summary.totalPintura, summary.valorPintura,
+                    claim.totalPinturaCLP, claim.totalPintura, claim.paintTotal, claim.valorPintura
+                ),
+                partsValue: pickMoneyValue(
+                    summary.partsValueNet, summary.valorRepuestos,
+                    claim.valorRepuestos, claim.partsValueNet, claim.repuestos
+                ),
+                bodyworkValue: pickMoneyValue(
+                    summary.bodyworkValue, summary.carroceria,
+                    claim.bodyworkValue, claim.carroceria
+                ),
+                mechatronicsValue: pickMoneyValue(
+                    summary.mechatronicsValue, summary.mecatronica,
+                    claim.mechatronicsValue, claim.mecatronica
+                ),
+                result: audit?.result || '',
+                savingsUf: audit ? getAuditSavingsUf(claim, ufVal) : null
+            };
+        };
+        const dashboardClaimsRows = hasDashboardResults
+            ? pagedClaims.map((claim) => {
+                const entry = getDashboardClaimEntry(claim);
+                return `
+                    <tr>
+                        <td>${safeText(entry.adjuster)}</td>
+                        <td>${safeText(entry.valuator)}</td>
+                        <td>${safeText(entry.workshop)}</td>
+                        <td>${safeText(entry.brand)}</td>
+                        <td>${safeText(entry.model)}</td>
+                        <td>${safeText(entry.plate)}</td>
+                        <td>${safeText(entry.year)}</td>
+                        <td>${safeText(entry.chassis)}</td>
+                        <td>${safeText(formatClpValue(entry.paintTotal))}</td>
+                        <td>${safeText(formatClpValue(entry.partsValue))}</td>
+                        <td>${safeText(formatClpValue(entry.bodyworkValue))}</td>
+                        <td>${safeText(formatClpValue(entry.mechatronicsValue))}</td>
+                        <td>${safeText(entry.result)}</td>
+                        <td>${safeText(formatUfValue(entry.savingsUf))}</td>
+                    </tr>
+                `;
+            }).join('')
+            : `
+                <tr>
+                    <td colspan="14" style="text-align:center; color: var(--text-muted); padding: 1.5rem;">
+                        Sin siniestros para los filtros aplicados.
+                    </td>
+                </tr>
+            `;
+        const dashboardPageSizeOptions = [5, 10, 20, 50].filter(size => size <= maxDashboardResultsPageSize);
+        const dashboardPageSizeOptionsHtml = dashboardPageSizeOptions.map(size => `
+            <option value="${size}"${dashboardResultsPageSize === size ? ' selected' : ''}>${size}</option>
+        `).join('');
         const dashboardHTML = `
             <div class="fade-in">
                 <div class="card dashboard-filters" id="dashboardFilters">
@@ -4130,6 +4234,53 @@ async function exportBudgetPdf(claimId) {
                             <div id="adjusterRankingChartContainer" class="ranking-container"></div>
                         </div>
                     </div>
+                    <div class="card dashboard-results-card">
+                        <div class="dashboard-results-header">
+                            <div>
+                                <h3 style="margin:0;">Siniestros del Dashboard</h3>
+                                <p class="dashboard-results-subtitle">Resultados según los filtros aplicados.</p>
+                            </div>
+                            <span class="dashboard-results-count">${activeCount} resultado${activeCount === 1 ? '' : 's'}</span>
+                        </div>
+                        <div class="table-container dashboard-results-table">
+                            <table class="dashboard-claims-table">
+                                <thead>
+                                    <tr>
+                                        <th>Liquidador</th>
+                                        <th>Valorador</th>
+                                        <th>Taller</th>
+                                        <th>Marca</th>
+                                        <th>Modelo</th>
+                                        <th>Patente</th>
+                                        <th>Año</th>
+                                        <th>Chasis</th>
+                                        <th>Total Pintura</th>
+                                        <th>Valor de repuestos</th>
+                                        <th>Carrocería</th>
+                                        <th>Mecatrónica</th>
+                                        <th>Resultado</th>
+                                        <th>Ahorro (UF)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${dashboardClaimsRows}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="claims-pagination dashboard-pagination">
+                            <div class="page-size-control">
+                                <label for="dashboardResultsPageSize">Mostrar</label>
+                                <select id="dashboardResultsPageSize">
+                                    ${dashboardPageSizeOptionsHtml}
+                                </select>
+                            </div>
+                            <div class="page-controls">
+                                <button class="btn-secondary" id="dashboardResultsPrev"${dashboardResultsPage <= 1 ? ' disabled' : ''}>Anterior</button>
+                                <span id="dashboardResultsInfo" style="color: var(--text-muted); font-size: 0.9rem;">${dashboardResultsInfo}</span>
+                                <button class="btn-secondary" id="dashboardResultsNext"${dashboardResultsPage >= totalPages ? ' disabled' : ''}>Siguiente</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -4146,6 +4297,7 @@ async function exportBudgetPdf(claimId) {
             dashAdjusterSel.value = dashboardFilterAdjuster || '';
             dashAdjusterSel.onchange = () => {
                 dashboardFilterAdjuster = dashAdjusterSel.value;
+                dashboardResultsPage = 1;
                 renderDashboard();
             };
         }
@@ -4153,6 +4305,7 @@ async function exportBudgetPdf(claimId) {
             dashValuatorSel.value = dashboardFilterValuator || '';
             dashValuatorSel.onchange = () => {
                 dashboardFilterValuator = dashValuatorSel.value;
+                dashboardResultsPage = 1;
                 renderDashboard();
             };
         }
@@ -4160,6 +4313,7 @@ async function exportBudgetPdf(claimId) {
             dashWorkshopSel.value = dashboardFilterWorkshop || '';
             dashWorkshopSel.onchange = () => {
                 dashboardFilterWorkshop = dashWorkshopSel.value;
+                dashboardResultsPage = 1;
                 renderDashboard();
             };
         }
@@ -4167,8 +4321,37 @@ async function exportBudgetPdf(claimId) {
             dashCitySel.value = dashboardFilterCity || '';
             dashCitySel.onchange = () => {
                 dashboardFilterCity = dashCitySel.value;
+                dashboardResultsPage = 1;
                 renderDashboard();
             };
+        }
+        const dashboardPageSizeSelect = document.getElementById('dashboardResultsPageSize');
+        if (dashboardPageSizeSelect) {
+            dashboardPageSizeSelect.value = String(dashboardResultsPageSize);
+            dashboardPageSizeSelect.addEventListener('change', () => {
+                const nextSize = Number(dashboardPageSizeSelect.value) || 5;
+                dashboardResultsPageSize = Math.min(nextSize, maxDashboardResultsPageSize);
+                dashboardResultsPage = 1;
+                renderDashboard();
+            });
+        }
+        const dashboardPrevBtn = document.getElementById('dashboardResultsPrev');
+        const dashboardNextBtn = document.getElementById('dashboardResultsNext');
+        if (dashboardPrevBtn) {
+            dashboardPrevBtn.addEventListener('click', () => {
+                if (dashboardResultsPage > 1) {
+                    dashboardResultsPage -= 1;
+                    renderDashboard();
+                }
+            });
+        }
+        if (dashboardNextBtn) {
+            dashboardNextBtn.addEventListener('click', () => {
+                if (dashboardResultsPage < totalPages) {
+                    dashboardResultsPage += 1;
+                    renderDashboard();
+                }
+            });
         }
         const avgCard = contentArea.querySelector('[data-role="avg-cost-card"]');
         if (avgCard) {
@@ -4181,7 +4364,6 @@ async function exportBudgetPdf(claimId) {
         const rankingMetricSelect = document.getElementById('rankingMetricSelect');
         const rankingTopSelect = document.getElementById('rankingTopSelect');
         const rankingContainer = document.getElementById('rankingChartContainer');
-        const ufVal = getEffectiveUfValue();
 
         const formatValue = (val) => {
             switch (dashboardRankingMetric) {
@@ -5106,7 +5288,8 @@ async function exportBudgetPdf(claimId) {
                                     <th>DYM</th>
                                     <th>Desabolladura</th>
                                     <th>Pintura</th>
-                                    <th>Observación</th>
+                                    <th>OBS. TÉCNICA</th>
+                                    <th>OBS. REPUESTOS</th>
                                     <th>Sugerido</th>
                                     <th></th>
                                 </tr>
@@ -5237,6 +5420,7 @@ async function exportBudgetPdf(claimId) {
                         desabolladura: '',
                         pintura: '',
                         observacion: '',
+                        observacionRepuestos: '',
                         sugerido: '',
                         excluded: false
                     })),
@@ -5261,6 +5445,7 @@ async function exportBudgetPdf(claimId) {
                 desabolladura: numOrEmpty(line.desabolladura),
                 pintura: numOrEmpty(line.pintura),
                 observacion: line.observacion ?? '',
+                observacionRepuestos: line.observacionRepuestos ?? line.obsRepuestos ?? '',
                 sugerido: numOrEmpty(line.sugerido ?? line.sugeridoHH),
                 excluded: !!line.excluded
             }));
@@ -5619,6 +5804,26 @@ async function exportBudgetPdf(claimId) {
                 selectObs.disabled = !!line.excluded;
                 tdObs.appendChild(selectObs);
                 tr.appendChild(tdObs);
+
+                const tdObsRepuestos = document.createElement('td');
+                const selectObsRepuestos = document.createElement('select');
+                selectObsRepuestos.dataset.field = 'observacionRepuestos';
+                const opcionesObsRepuestos = ['', 'Sobreprecio', 'Atraso', 'Calidad incorrecta', 'Rep. incorrecto'];
+                opcionesObsRepuestos.forEach(val => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val || 'Selecciona...';
+                    if (line.observacionRepuestos === val) opt.selected = true;
+                    selectObsRepuestos.appendChild(opt);
+                });
+                selectObsRepuestos.addEventListener('change', () => {
+                    line.observacionRepuestos = selectObsRepuestos.value || '';
+                    claimDetailDirty = true;
+                    debouncedSaveClaimsToStorage();
+                });
+                selectObsRepuestos.disabled = !!line.excluded;
+                tdObsRepuestos.appendChild(selectObsRepuestos);
+                tr.appendChild(tdObsRepuestos);
 
                 const tdHH = document.createElement('td');
                 const inputHH = document.createElement('input');
@@ -6025,13 +6230,18 @@ async function exportBudgetPdf(claimId) {
                         const sug = toNumber(line.sugerido);
                         const ajusteLiq = precio + mec + dym + des + pint; // suma de todos los ajustes auditados
                         const ahorro = ajusteLiq - sug; // resta del total menos el sugerido (valor auditado)
+                        const formatObs = (val) => {
+                            const txt = String(val ?? '').trim();
+                            return txt ? txt : '-';
+                        };
                         const row = document.createElement('div');
                         row.className = 'table__row';
                         row.innerHTML = `
                             <div class="table__cell w-25">${line.repuestoTrabajo || ''}</div>
-                            <div class="table__cell w-35">${line.observacion || ''}</div>
-                            <div class="table__cell w-15 ta-right">${ajusteLiq.toLocaleString('es-CL', { minimumFractionDigits: 0 })}</div>
-                            <div class="table__cell w-15 ta-right">${sug.toLocaleString('es-CL', { minimumFractionDigits: 0 })}</div>
+                            <div class="table__cell w-35 report-col-obstec">${formatObs(line.observacion)}</div>
+                            <div class="table__cell w-10 report-col-obsrep">${formatObs(line.observacionRepuestos || line.obsRepuestos)}</div>
+                            <div class="table__cell w-10 ta-right">${ajusteLiq.toLocaleString('es-CL', { minimumFractionDigits: 0 })}</div>
+                            <div class="table__cell w-10 ta-right">${sug.toLocaleString('es-CL', { minimumFractionDigits: 0 })}</div>
                             <div class="table__cell w-10 ta-right">${ahorro.toLocaleString('es-CL', { minimumFractionDigits: 0 })}</div>
                         `;
                         tb.appendChild(row);
@@ -6270,14 +6480,14 @@ async function exportBudgetPdf(claimId) {
                         </thead>
                         <tbody>
                             <tr>
-                                <td>Taller Central</td>
+                                <td>Sociedad rutakar spa</td>
                                 <td>45</td>
                                 <td>12 días</td>
                                 <td>$980.000</td>
                                 <td><span style="color: var(--success)">9.8/10</span></td>
                             </tr>
                             <tr>
-                                <td>Autofactoria</td>
+                                <td>Servicio automotriz raul jovino</td>
                                 <td>32</td>
                                 <td>15 días</td>
                                 <td>$1.100.000</td>
